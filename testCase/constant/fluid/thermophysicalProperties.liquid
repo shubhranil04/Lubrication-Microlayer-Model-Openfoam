@@ -1,0 +1,60 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+kappa       6.79e-1;               // Thermal conductivity (W/m·K)
+mu          2.8e-4;                // Dynamic viscosity (kg/m·s)
+Cp          4220;                  // Specific heat capacity (J/kg·K)
+
+
+thermoType
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState Boussinesq;
+    specie          specie;
+    energy          sensibleInternalEnergy;
+}
+
+mixture
+{
+    specie
+    {
+        molWeight   18.0;
+    }
+    
+    equationOfState
+    {
+        rho0        958;
+        T0	    373.15;
+        beta	    2.68e-4;
+    }
+    
+    thermodynamics
+    {
+        Cp          $Cp ;
+        Hf          0;
+    }
+    transport
+    {
+        mu          $mu ;
+        Pr          #calc "$Cp * $mu / $kappa";
+    }
+}
+
+// ************************************************************************* //

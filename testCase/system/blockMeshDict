@@ -1,0 +1,97 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "runParams"
+
+vertices
+(
+	(0 -$solidLy 0) 	// bottom corner
+	($Lx -$solidLy $Lz)	// bottom right (front)
+	($Lx $fluidLy $Lz) 	// top right (front)
+	(0 $fluidLy 0)	// top corner
+	($Lx -$solidLy -$Lz) 	// bottom right (back)
+	($Lx $fluidLy -$Lz)	// top right (back)
+);
+
+blocks
+(
+	hex (0 1 4 0 3 2 5 3) ($nX  1 $nY) simpleGrading (1 1 1)
+);
+
+edges
+(
+	//arc 1 4 ($Lx 0 0)
+	//arc 2 5 ($Lx $Ly 0)
+);
+
+boundary
+(
+     front
+     { 
+           type wedge;
+           faces  
+           (
+               (0 1 2 3)
+           );
+      }
+      
+     back
+     { 
+           type wedge;
+           faces  
+           (
+               (0 3 5 4)
+           );
+      }
+     right
+     { 
+           type patch;
+           faces  
+           (
+               (1 4 5 2)
+           );
+      }
+     bottom
+     { 
+           type patch;
+           faces  
+           (
+               (0 4 1 0)
+           );
+      }
+     top
+     { 
+           type patch;
+           faces  
+           (
+               (3 5 2 3)
+           );
+      }
+     axis
+     { 
+           type empty;
+           faces  
+           (
+               (0 3 3 0)
+           );
+      }
+);
+ 
+mergePatchPairs
+(
+);
+

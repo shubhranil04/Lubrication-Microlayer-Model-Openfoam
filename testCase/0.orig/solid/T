@@ -1,0 +1,105 @@
+/*--------------------------------*- C++ -*----------------------------------*\run
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0];
+
+#include "../../system/runParams"
+
+internalField  #codeStream  /* Use of codeStream to initialize T field */
+{
+  codeInclude  /* Headers for compilation */
+  #{
+  #include "fvCFD.H"
+  #};
+
+  codeOptions /* Compilation options */
+  #{
+    -I$(FOAM_SRC)/finiteVolume/lnInclude \
+    -I$(FOAM_SRC)/meshTools/lnInclude 
+  #};
+
+  codeLibs  /* Libraries for compilation */
+  #{
+    -lmeshTools \
+    -lfiniteVolume
+  #};
+
+  code  /* User code */
+  #{
+    /* Access to internal mesh information */
+    const IOdictionary& d = static_cast<const IOdictionary&>(dict);
+    const fvMesh& mesh = refCast<const fvMesh>(d.db());
+
+    scalarField T(mesh.nCells(), 0.); /* initialization */
+
+    /* User variables initialization */
+    const scalar kappa = 401;
+    const scalar Tact = 379.17;
+    const scalar q = 34e3;
+    
+    forAll(T, i) /* Loop on elements */
+    {
+      const scalar y = mesh.C()[i][1]; /* Access to y component of cell centers coordinates */
+      T[i] = Tact-q/kappa*y; /* T assignment for all elements */
+    }
+
+    T.writeEntry("", os); /* Write output in the dictionary */
+
+  #};
+};
+
+boundaryField
+{
+    solid_to_fluid
+    {
+        type            compressible::turbulentTemperatureRadCoupledMixed;
+    	value           uniform $Tact;
+        Tnbr            T;
+        kappaMethod     solidThermo;
+        kappaName       none;
+    }
+    
+    bottom
+    {
+    	type		externalWallHeatFluxTemperature;
+    	mode		flux;
+    	q		uniform $q;
+    	value 		uniform $Tact;
+    	kappaMethod     solidThermo;
+        kappaName       none;
+    }
+
+    right
+    {
+        type            zeroGradient;
+    }
+    
+    axis
+    {
+        type            empty;
+    }
+    
+    front
+    {
+    	type		wedge;
+    }
+    
+    back
+    {
+    	type		wedge;
+    }
+}
+
