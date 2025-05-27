@@ -21,19 +21,19 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.1;
+endTime         0.01;
 
 deltaT          1e-6;
 
 writeControl    adjustable;
 
-writeInterval   0.1;
+writeInterval   1e-4;
 
 purgeWrite      0;
 
 writeFormat     ascii;
 
-writePrecision  12;
+writePrecision  10;
 
 writeCompression off;
 
@@ -43,7 +43,7 @@ timePrecision   8;
 
 runTimeModifiable yes;
 
-maxCo           0.5;
+maxCo           0.2;
 
 maxAlphaCo      0.1;
 
@@ -58,7 +58,7 @@ adjustTimeStep  yes;
 
 functions
 {
- 
+
 }
 
 
