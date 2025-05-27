@@ -1,0 +1,2 @@
+EXE = $(FOAM_USER_APPBIN)/lubricationMicrolayerModelNucleateBoilingFlow
+LIBS = -lpetsc -lmpi

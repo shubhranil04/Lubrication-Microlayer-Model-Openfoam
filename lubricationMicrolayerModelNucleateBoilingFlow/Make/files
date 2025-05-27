@@ -1,0 +1,7 @@
+fluid/multiCourantNo.C
+solid/solidRegionDiffNo.C
+lubricationMicrolayerModelNucleateBoilingFlow.C
+
+EXE = $(FOAM_USER_APPBIN)/lubricationMicrolayerModelNucleateBoilingFlow
+
+LIBS = -lpetsc -lmpi
