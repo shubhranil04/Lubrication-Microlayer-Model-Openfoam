@@ -82,9 +82,9 @@ if (hasNormals && hasCentres)
 
         scalar dt01 = runTime.deltaTValue();
 
-        scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01+1e-20);
+        scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01 + 1e-20);
 
-        scalar bubbleExpansionAcceleration = 2/((dt01+1e-20)*(dt12+1e-20)*(dt01+dt12+1e-20)) * (bubbleRadius*dt12*dt12 - bubbleRadius1*(dt01+dt12)*(dt01+dt12) + bubbleRadius2*dt01*dt01);
+        scalar bubbleExpansionAcceleration = 2 / ((dt01 + 1e-20) * (dt12 + 1e-20) * (dt01 + dt12 + 1e-20)) * (bubbleRadius * dt12 * dt12 - bubbleRadius1 * (dt01 + dt12) * (dt01 + dt12) + bubbleRadius2 * dt01 * dt01);
 
         Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
         Info << "" << nl << "Bubble expansion velocity = " << bubbleExpansionVelocity << " m" << nl;
@@ -94,9 +94,14 @@ if (hasNormals && hasCentres)
         microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
         microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
 
+        if (mesh.time().writeTime())
+        {
+            //microlayerDict.write();
+        }
+
         bubbleRadius2 = bubbleRadius1;
         bubbleRadius1 = bubbleRadius;
-        
+
         dt12 = dt01;
     }
     else

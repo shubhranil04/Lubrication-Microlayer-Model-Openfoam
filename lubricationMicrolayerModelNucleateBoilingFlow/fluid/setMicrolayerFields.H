@@ -12,7 +12,7 @@ scalar& dt12 = dt12Fluid[i];
 
 volScalarField& microlayerMassSource = microlayerMassSourceFluid[i];
 
-IOdictionary microlayerDict = microlayerDictFluid[i];
+IOdictionary& microlayerDict = microlayerDictFluid[i];
 
 const scalar cSlope =  cSlopeFluid[i];
 

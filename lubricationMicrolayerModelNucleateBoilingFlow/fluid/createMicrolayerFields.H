@@ -47,10 +47,10 @@ forAll(fluidRegions, i)
         new IOdictionary(
             IOobject(
                 "microlayerProperties",
-                UFluid[i].time().constant(),
-                UFluid[i].db(),
+                runTime.timeName(),
+                fluidRegions[i],
                 IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::AUTO_WRITE))
+                IOobject::AUTO_WRITE ))
 
     );
 

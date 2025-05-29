@@ -19,7 +19,7 @@ startFrom       latestTime;
 
 startTime       0;
 
-stopAt          writeNow; //endTime;
+stopAt          endTime; //writeNow; //endTime;
 
 endTime         0.01;
 
@@ -54,7 +54,7 @@ maxDi           10.0;
 
 maxDeltaT       1e-3;
 
-adjustTimeStep  yes;
+adjustTimeStep  no;
 
 functions
 {
