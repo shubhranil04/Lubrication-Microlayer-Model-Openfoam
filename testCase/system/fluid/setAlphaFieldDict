@@ -19,3 +19,4 @@ field "alpha.liquid";
 type sphere;
 origin (0 0 0);
 radius 50e-6;
+scale -1;

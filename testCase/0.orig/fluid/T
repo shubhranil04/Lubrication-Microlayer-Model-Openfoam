@@ -18,20 +18,21 @@ dimensions      [0 0 0 1 0 0 0];
 
 #include "../../system/runParams"
 
-internalField   uniform $Tbulk;
+
+internalField  uniform $Tbulk;
 
 boundaryField
 {
     right
     {
         type            calculated;
-        value           $internalField;
+        value           uniform $Tbulk;
     }
     
     top
     {
         type            calculated;
-        value           $internalField;
+        value           uniform $Tbulk;
     }
     
     fluid_to_solid

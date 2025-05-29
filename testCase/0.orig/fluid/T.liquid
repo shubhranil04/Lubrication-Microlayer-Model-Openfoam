@@ -16,9 +16,61 @@ FoamFile
 
 dimensions      [0 0 0 1 0 0 0];
 
-Tbulk	373.15;
+#include "../../system/runParams"
 
-internalField   uniform $Tbulk;
+
+internalField  #codeStream  /* Use of codeStream to initialize T field */
+{
+  codeInclude  /* Headers for compilation */
+  #{
+  #include "fvCFD.H"
+  #};
+
+  codeOptions /* Compilation options */
+  #{
+    -I$(FOAM_SRC)/finiteVolume/lnInclude \
+    -I$(FOAM_SRC)/meshTools/lnInclude 
+  #};
+
+  codeLibs  /* Libraries for compilation */
+  #{
+    -lmeshTools \
+    -lfiniteVolume
+  #};
+
+  code  /* User code */
+  #{
+    /* Access to internal mesh information */
+    const IOdictionary& d = static_cast<const IOdictionary&>(dict);
+    const fvMesh& mesh = refCast<const fvMesh>(d.db());
+
+    scalarField T(mesh.nCells(), 0.); /* initialization */
+
+    /* User variables initialization */
+ 
+    const scalar Tact = 379.17;
+    const scalar Tbulk = 373.15;
+    const scalar blThickness = 0.5e-3;	
+    
+    forAll(T, i) /* Loop on elements */
+    {
+      const scalar y = mesh.C()[i][1]; /* Access to y component of cell centers coordinates */
+      
+      if (y < blThickness)
+      {
+      	T[i] = Tact - y/blThickness*(Tact - Tbulk);
+      }
+      
+      else
+      {
+      	T[i] = Tbulk;
+      }	
+    }
+
+    T.writeEntry("", os); /* Write output in the dictionary */
+
+  #};
+};
 
 boundaryField
 {

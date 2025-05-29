@@ -34,6 +34,10 @@ Lz     #calc "$Lx*$theta/2*$pi/180";
 
 q	34e3; // Heat flux from heater in Watts
 
+// Saturation Temperature
+
+Tsat 	373.15;
+
 // Activation Temperature
 
 Tact	379.17;
