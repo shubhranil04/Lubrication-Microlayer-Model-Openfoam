@@ -94,11 +94,6 @@ if (hasNormals && hasCentres)
         microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
         microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
 
-        if (mesh.time().writeTime())
-        {
-            //microlayerDict.write();
-        }
-
         bubbleRadius2 = bubbleRadius1;
         bubbleRadius1 = bubbleRadius;
 
