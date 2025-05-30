@@ -16,6 +16,8 @@ FoamFile
 
 dimensions      [0 0 0 0 0 0 0];
 
+#include "../../system/runParams"
+
 internalField   uniform 1;
 
 boundaryField
@@ -48,7 +50,7 @@ boundaryField
 	fluid_to_solid
 	{
 		type	constantAlphaContactAngle;
-		theta0	38;
+		theta0	$CA;
 		limit	gradient;
 		value	uniform 1;
 	}
