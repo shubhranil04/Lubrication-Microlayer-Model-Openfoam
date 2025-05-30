@@ -14,9 +14,10 @@ FoamFile
     object      fvSolution;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../runParams"
 
 field "alpha.liquid";
 type sphere;
-origin (0 0 0);
-radius 50e-6;
+origin (0 $seedCentreHeight 0);
+radius $seedRadius;
 scale -1;

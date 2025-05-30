@@ -6,8 +6,7 @@
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 
-// Define mesh variables (all lengths in mm for easier manipulation)
-
+// Define mesh variables 
 Lx      1.5e-3;     // X length in m
 
 fluidLy  2.25e-3;    // Fluid Y length in m
@@ -16,7 +15,7 @@ solidLy  4e-3;     // Solid Y length in m
 
 dx     0.025e-3;   // Grid size in m (25 micrometers)
 
-theta   5.0;     // Angle in degrees (5 degrees)
+theta   5.0;     // Wedge Angle in degrees (5 degrees)
 
 pi 	3.14159265359;
 
@@ -33,6 +32,18 @@ Lz     #calc "$Lx*$theta/2*$pi/180";
 // Heat Flux
 
 q	34e3; // Heat flux from heater in Watts
+
+// Contact angle 
+
+CA	38.0;
+
+// Initial Seed Radius
+
+seedRadius	50e-6;
+
+// Initial Seed height
+
+seedCentreHeight	#calc "$seedRadius * cos($CA * $pi / 180)";
 
 // Saturation Temperature
 
