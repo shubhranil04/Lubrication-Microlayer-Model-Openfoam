@@ -39,7 +39,7 @@ CA	38.0;
 
 // Initial Seed Radius
 
-seedRadius	50e-6;
+seedRadius	60e-6;
 
 // Initial Seed height
 
