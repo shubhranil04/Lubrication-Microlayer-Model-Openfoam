@@ -19,6 +19,8 @@ volScalarField &alpha2(mixture.alpha2());
 Info << "Reading thermophysical properties\n"
      << endl;
 
+const IOdictionary& thermophysicalDict = thermophysicalDictFluid[i];
+
 volScalarField &p = mixture.p();
 volScalarField &T = mixture.T();
 volScalarField &rho1 = mixture.thermo1().rho();

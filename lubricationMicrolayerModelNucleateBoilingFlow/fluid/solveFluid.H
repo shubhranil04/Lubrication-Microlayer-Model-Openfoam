@@ -51,7 +51,7 @@ if (oCorr == 0)
         // Calculate absolute flux from the mapped surface velocity
         phi = mesh.Sf() & UfFluid[i]();
 
-#include "correctPhi.H"
+        #include "correctPhi.H"
 
         // Make the fluxes relative to the mesh motion
         fvc::makeRelative(phi, U);
@@ -80,6 +80,7 @@ surfForces.correct();
 phaseChange.correctSatProperties(p, T);
 
 #include "findBubbleRadius.H"
+#include "calculateInitialMicrolayerThickness.H"
 
 #include "YEqns.H"
 

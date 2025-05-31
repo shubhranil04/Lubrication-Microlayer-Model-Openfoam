@@ -1,111 +1,106 @@
-// Look up PLIC normals and positions.
+const word initialMicrolayerThicknessModel = microlayerDict.lookupOrDefault<word>("initialMicrolayerThicknessModel", "linear");
 
-const auto &meshPoints = mesh.points();
-const auto &meshFaces = mesh.faces();
+scalar initialMicrolayerThickness = microlayerDict.lookupOrDefault<scalar>("initialMicrolayerThickness", 0.0);
 
-const auto &db = alpha1.db();
+scalar meniscusCurvature = microlayerDict.lookupOrDefault<scalar>("meniscusCurvature", 0.0);
 
-const auto normalsName = IOobject::groupName(
-    "interfaceNormal",
-    alpha1.internalField().group());
-const auto centresName = IOobject::groupName(
-    "interfaceCentre",
-    alpha1.internalField().group());
+if (initialMicrolayerThicknessModel == "linear")
+{   
+    Info << "Using linear initial microlayer thickness model" << nl;
 
-bool hasNormals = db.found(normalsName);
-bool hasCentres = db.found(centresName);
+    const scalar cSlope = microlayerDict.lookupOrDefault<scalar>("cSlope",4.46e-3);  // Default value from Utaka et al. 2013
 
-// Get patch fields for interface normals and centers
-const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
-const fvPatch &patch = mesh.boundary()[patchIndex];
+    Info << "cSlope = " << cSlope << nl;
 
-bool isBubble = false;
+    initialMicrolayerThickness = cSlope * bubbleRadius1;
 
-if (hasNormals && hasCentres)
-{
-    // Info << "Interpolating the PLIC" << nl;
-    const volVectorField &interfaceCentre =
-        db.lookupObject<volVectorField>(centresName);
+    Info << "Initial microlayer thickness = " << initialMicrolayerThickness*1e6 << " micrometers" << nl << "" << nl;
 
-    const volVectorField &interfaceNormal =
-        db.lookupObject<volVectorField>(normalsName);
+    const scalar sigma(thermophysicalDict.get<dimensionedScalar>("sigma").value());
 
-    const auto &pInterfaceCentres = interfaceCentre.boundaryField()[patchIndex];
-    const auto &pInterfaceNormals = interfaceNormal.boundaryField()[patchIndex];
+    const volScalarField& mu1 =
+        db.objectRegistry::lookupObject<volScalarField>("thermo:mu.liquid");
 
-    const auto pInternalCentresTmp = pInterfaceCentres.patchInternalField();
-    const auto pInternalNormalsTmp = pInterfaceNormals.patchInternalField();
+    const scalar muLiquid = gSum((mu1.internalField()*mesh.V()).ref())/gSum(mesh.V());
 
-    const auto &pInternalCentres = pInternalCentresTmp.cref();
-    const auto &pInternalNormals = pInternalNormalsTmp.cref();
+    scalar Rbdot = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity",0);
 
-    scalar numContactLineCells = 0.0;
-    scalar bubbleRadius = 0.0;
-
-    forAll(pInternalCentres, faceI)
+    if (Rbdot < 0)
     {
-        bool hasContactLine = false;
-
-        const vector &cellInterfaceNormal = pInternalNormals[faceI];
-        const vector &cellInterfaceCentre = pInternalCentres[faceI];
-
-        const auto &thisFace = meshFaces[patch.start() + faceI];
-
-        // Get face points.
-        for (auto pointI = 0; pointI < (thisFace.size() - 1); ++pointI)
-        {
-            // Compute the signed distance of the first point.
-            const point &firstFacePoint = meshPoints[thisFace[pointI]];
-            const scalar firstDist = (firstFacePoint - cellInterfaceCentre) & cellInterfaceNormal;
-
-            // Compute the signed distance of the second point.
-            const point &secondFacePoint = meshPoints[thisFace[pointI + 1]];
-            const scalar secondDist = (secondFacePoint - cellInterfaceCentre) & cellInterfaceNormal;
-
-            if (firstDist * secondDist < 0)
-            {
-                hasContactLine = true;
-                break;
-            }
-        }
-
-        if (hasContactLine)
-        {
-            numContactLineCells += 1;
-            bubbleRadius += pInternalCentres[faceI].x();
-        }
+        Rbdot = 0;
     }
-
-    if (numContactLineCells > 0)
-    {
-        bubbleRadius /= numContactLineCells;
-
-        scalar dt01 = runTime.deltaTValue();
-
-        scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01 + 1e-20);
-
-        scalar bubbleExpansionAcceleration = 2 / ((dt01 + 1e-20) * (dt12 + 1e-20) * (dt01 + dt12 + 1e-20)) * (bubbleRadius * dt12 * dt12 - bubbleRadius1 * (dt01 + dt12) * (dt01 + dt12) + bubbleRadius2 * dt01 * dt01);
-
-        Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
-        Info << "" << nl << "Bubble expansion velocity = " << bubbleExpansionVelocity << " m" << nl;
-        Info << "Bubble expansion acceleration = " << bubbleExpansionAcceleration << " m/s" << nl << "" << nl;
-
-        microlayerDict.set("bubbleRadius", bubbleRadius);
-        microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
-        microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
-
-        bubbleRadius2 = bubbleRadius1;
-        bubbleRadius1 = bubbleRadius;
-
-        dt12 = dt01;
-    }
-    else
-    {
-        Info << "No contact line cells found" << nl << "" << nl;
-    }
+    // Calculate meniscus curvature based on the initial microlayer thickness
+    meniscusCurvature = 1.34 * Foam::pow(muLiquid * Rbdot / sigma, 2.0/3.0) / 
+                         initialMicrolayerThickness;
 }
 
-else
+else if (initialMicrolayerThicknessModel == "landauLevich")
 {
-    Info << "No normals and centres found" << nl;
+    Info << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024)" << nl;
+
+    const scalar sigma(thermophysicalDict.get<dimensionedScalar>("sigma").value());
+
+    const scalar rhoLiquid = gSum((rho1.internalField()*mesh.V()).ref())/gSum(mesh.V());
+    
+    const volScalarField& mu1 =
+        db.objectRegistry::lookupObject<volScalarField>("thermo:mu.liquid");
+
+    const scalar muLiquid = gSum((mu1.internalField()*mesh.V()).ref())/gSum(mesh.V());
+
+    const scalar Rb = microlayerDict.lookupOrDefault<scalar>("bubbleRadius",0) + 1e-20;
+
+    scalar Rbdot = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity",0);
+
+    if (Rbdot < 0)
+    {
+        Rbdot = 0;
+    }
+
+    const scalar Rbddot = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionAcceleration",0);
+
+    // Coefficients
+
+    const scalar a3 = rhoLiquid/sigma * (Foam::pow(Rbdot/Rb,2.0) - Rbddot/(3*Rb));
+
+    const scalar a2 = - rhoLiquid * Rbddot / (2* sigma);
+
+    const scalar a1 = 1 / Rb;
+
+    const scalar a0 = -1;
+
+    struct CubicFunction
+    {
+        Foam::scalar a, b, c, d;
+
+        std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
+        {
+            Foam::scalar fx = a*x*x*x + b*x*x + c*x + d;
+            Foam::scalar dfx = 3*a*x*x + 2*b*x + c;
+            return std::make_pair(fx, dfx);
+        }
+    };
+
+    CubicFunction f{a3, a2, a1, a0}; 
+
+    const scalar guess = 1e-6;
+    const scalar min = -100.0;
+    const scalar max = 100.0;
+    const int digits = std::numeric_limits<Foam::scalar>::digits;
+
+    scalar root = boost::math::tools::newton_raphson_iterate(
+        f, guess, min, max, digits
+    );
+
+    const scalar xbar = root;
+
+    meniscusCurvature = 3*a3*pow(xbar,2) + 2*a2*xbar + a1;
+
+    const scalar meniscusRadius = 1.0 / meniscusCurvature;
+
+    initialMicrolayerThickness = 1.34 * meniscusRadius * Foam::pow(muLiquid * Rbdot / sigma, 2.0/3.0);
+
+    Info << "Initial microlayer thickness = " << initialMicrolayerThickness*1e6 << " micrometers" << nl << "" << nl;
 }
+
+microlayerDict.set("meniscusCurvature", meniscusCurvature);
+microlayerDict.set("initialMicrolayerThickness", initialMicrolayerThickness);

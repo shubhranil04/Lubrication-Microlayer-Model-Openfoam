@@ -22,41 +22,41 @@ FoamFile
     {
         type            wedge;
         inGroups        1(wedge);
-        nFaces          5400;
-        startFace       10650;
+        nFaces          7200;
+        startFace       14220;
     }
     back
     {
         type            wedge;
         inGroups        1(wedge);
-        nFaces          5400;
-        startFace       16050;
+        nFaces          7200;
+        startFace       21420;
     }
     right
     {
         type            patch;
-        nFaces          90;
-        startFace       21450;
+        nFaces          120;
+        startFace       28620;
     }
     top
     {
         type            patch;
         nFaces          60;
-        startFace       21540;
+        startFace       28740;
     }
     axis
     {
         type            empty;
         inGroups        1(empty);
-        nFaces          90;
-        startFace       21600;
+        nFaces          120;
+        startFace       28800;
     }
     fluid_to_solid
     {
         type            mappedWall;
         inGroups        1(wall);
         nFaces          60;
-        startFace       21690;
+        startFace       28920;
         sampleMode      nearestPatchFace;
         sampleRegion    solid;
         samplePatch     solid_to_fluid;

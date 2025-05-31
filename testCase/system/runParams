@@ -9,7 +9,7 @@
 // Define mesh variables 
 Lx      1.5e-3;     // X length in m
 
-fluidLy  2.25e-3;    // Fluid Y length in m
+fluidLy  3e-3;    // Fluid Y length in m
 
 solidLy  4e-3;     // Solid Y length in m
 

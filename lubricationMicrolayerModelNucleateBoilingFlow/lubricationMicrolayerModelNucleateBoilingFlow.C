@@ -62,9 +62,11 @@ Description
 #include "singleComponentPhaseChange.H"
 
 #include <petscsnes.h>
+#include <boost/math/tools/roots.hpp>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 static char help[] = "Phase change solver for nucleate boiling with lubrication theory based microlayer model.\n";
+
 
 int main(int argc, char *argv[])
 {
@@ -77,32 +79,32 @@ int main(int argc, char *argv[])
         "overwrite",
         "Update and overwrite the existing mesh useful for adaptive mesh refinement");
 
-#include "initPETSC.H"
-#define NO_CONTROL
-#define CREATE_MESH createMeshesPostProcess.H
-#include "postProcess.H"
+    #include "initPETSC.H"
+    #define NO_CONTROL
+    #define CREATE_MESH createMeshesPostProcess.H
+    #include "postProcess.H"
 
-#include "setRootCaseLists.H"
-#include "createTime.H"
-#include "createMeshes.H"
-#include "createFields.H"
-#include "initContinuityErrs.H"
-#include "createTimeControls.H"
-#include "readSolidTimeControls.H"
-#include "multiphaseMultiRegionCourantNo.H"
-#include "solidRegionDiffusionNo.H"
+    #include "setRootCaseLists.H"
+    #include "createTime.H"
+    #include "createMeshes.H"
+    #include "createFields.H"
+    #include "initContinuityErrs.H"
+    #include "createTimeControls.H"
+    #include "readSolidTimeControls.H"
+    #include "multiphaseMultiRegionCourantNo.H"
+    #include "solidRegionDiffusionNo.H"
 
     const bool overwrite = args.found("overwrite");
 
     while (runTime.run())
     {
-#include "readTimeControls.H"
-#include "readSolidTimeControls.H"
-#include "readPIMPLEControls.H"
+        #include "readTimeControls.H"
+        #include "readSolidTimeControls.H"
+        #include "readPIMPLEControls.H"
 
-#include "multiphaseMultiRegionCourantNo.H"
-#include "solidRegionDiffusionNo.H"
-#include "setMultiRegionDeltaT.H"
+        #include "multiphaseMultiRegionCourantNo.H"
+        #include "solidRegionDiffusionNo.H"
+        #include "setMultiRegionDeltaT.H"
 
         ++runTime;
 
@@ -117,18 +119,18 @@ int main(int argc, char *argv[])
             {
                 Info << "\nSolving for fluid region "
                      << fluidRegions[i].name() << endl;
-#include "setRegionFluidFields.H"
-#include "readFluidMultiRegionPIMPLEControls.H"
-#include "solveFluid.H"
+                #include "setRegionFluidFields.H"
+                #include "readFluidMultiRegionPIMPLEControls.H"
+                #include "solveFluid.H"
             }
 
             forAll(solidRegions, i)
             {
                 Info << "\nSolving for solid region "
                      << solidRegions[i].name() << endl;
-#include "setRegionSolidFields.H"
-#include "readSolidMultiRegionPIMPLEControls.H"
-#include "solveSolid.H"
+                #include "setRegionSolidFields.H"
+                #include "readSolidMultiRegionPIMPLEControls.H"
+                #include "solveSolid.H"
             }
         }
 

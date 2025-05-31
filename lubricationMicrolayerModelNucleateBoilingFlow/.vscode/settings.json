@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "multiCourantNo.C": "cpp",
-        "lubricationMicrolayerModelNucleateBoilingFlow.C": "cpp"
+        "lubricationMicrolayerModelNucleateBoilingFlow.C": "cpp",
+        "ostream": "cpp",
+        "functional": "cpp"
     }
 }

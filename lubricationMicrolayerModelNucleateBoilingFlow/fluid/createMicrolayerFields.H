@@ -14,8 +14,6 @@ PtrList<volScalarField> microlayerMassSourceFluid(fluidRegions.size());
 
 PtrList<IOdictionary> microlayerDictFluid(fluidRegions.size());
 
-PtrList<scalar> cSlopeFluid(fluidRegions.size());
-
 // PETSC objects
 PtrList<Vec> microlayerGridFluid(fluidRegions.size());
 
@@ -53,10 +51,6 @@ forAll(fluidRegions, i)
                 IOobject::AUTO_WRITE ))
 
     );
-
-    cSlopeFluid.set(
-        i,
-        new scalar(microlayerDictFluid[i].lookupOrDefault<scalar>("cSlope", 0)));
 
     bubbleRadius1Fluid.set(
         i,

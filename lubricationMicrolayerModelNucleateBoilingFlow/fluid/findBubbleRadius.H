@@ -87,8 +87,8 @@ if (hasNormals && hasCentres)
         scalar bubbleExpansionAcceleration = 2 / ((dt01 + 1e-20) * (dt12 + 1e-20) * (dt01 + dt12 + 1e-20)) * (bubbleRadius * dt12 * dt12 - bubbleRadius1 * (dt01 + dt12) * (dt01 + dt12) + bubbleRadius2 * dt01 * dt01);
 
         Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
-        Info << "" << nl << "Bubble expansion velocity = " << bubbleExpansionVelocity << " m" << nl;
-        Info << "Bubble expansion acceleration = " << bubbleExpansionAcceleration << " m/s" << nl << "" << nl;
+        Info << "Bubble foot expansion velocity = " << bubbleExpansionVelocity << " m/s" << nl;
+        Info << "Bubble foot expansion acceleration = " << bubbleExpansionAcceleration << " m/s2" << nl << "" << nl;
 
         microlayerDict.set("bubbleRadius", bubbleRadius);
         microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);

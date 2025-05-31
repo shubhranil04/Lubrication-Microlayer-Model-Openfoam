@@ -14,10 +14,6 @@ volScalarField& microlayerMassSource = microlayerMassSourceFluid[i];
 
 IOdictionary& microlayerDict = microlayerDictFluid[i];
 
-const scalar cSlope =  cSlopeFluid[i];
-
-Info << "cSlope = " << cSlope << nl;
-
 // Petsc Objects 
 
 // Not initialized in createMicrolayerFields yet
