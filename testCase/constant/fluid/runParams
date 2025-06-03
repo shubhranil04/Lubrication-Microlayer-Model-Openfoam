@@ -15,9 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Define mesh variables 
-Lx      1.5e-3;     // X length in m
+Lx      2e-3;     // X length in m
 
-fluidLy  3e-3;    // Fluid Y length in m
+fluidLy  4e-3;    // Fluid Y length in m
 
 solidLy  4e-3;     // Solid Y length in m
 
@@ -51,7 +51,7 @@ rhol 	958;
 
 mul	2.8e-4;
 
-betal	7e-4;
+betal	2.9e-3;
 
 cpl 	4.22e3;
 
@@ -61,7 +61,7 @@ rhov 	0.597;
 
 muv	1.26e-5;
 
-betav	0.0029;
+betav	0.00075;
 
 cpv 	2.03e3;
 
