@@ -16,7 +16,9 @@ FoamFile
 
 dimensions      [1 -1 -2 0 0 0 0];
 
-internalField   uniform 101300;
+#include "../../constant/runParams"
+
+internalField   uniform $psat;
 
 boundaryField
 {
@@ -28,7 +30,7 @@ boundaryField
     top
     {
         type            totalPressure;
-        p0		uniform 101300;
+        p0		uniform $psat;
     }
     
     right

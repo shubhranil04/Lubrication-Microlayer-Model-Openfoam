@@ -16,7 +16,7 @@ FoamFile
 
 dimensions      [0 0 0 1 0 0 0];
 
-#include "../../system/runParams"
+#include "../../constant/runParams"
 
 internalField  #codeStream  /* Use of codeStream to initialize T field */
 {
@@ -42,13 +42,25 @@ internalField  #codeStream  /* Use of codeStream to initialize T field */
     /* Access to internal mesh information */
     const IOdictionary& d = static_cast<const IOdictionary&>(dict);
     const fvMesh& mesh = refCast<const fvMesh>(d.db());
-
+    const Foam::Time& runTime = static_cast<const Foam::objectRegistry&>(d.db()).time();
     scalarField T(mesh.nCells(), 0.); /* initialization */
 
+    IOdictionary runParams
+    (
+        IOobject
+        (
+            "runParams",
+            runTime.constant(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        )
+    );
+    
     /* User variables initialization */
-    const scalar kappa = 401;
-    const scalar Tact = 379.17;
-    const scalar q = 34e3;
+    const scalar kappa = readScalar(runParams.lookup("kappas"));
+    const scalar Tact = readScalar(runParams.lookup("Tact"));
+    const scalar q = readScalar(runParams.lookup("q"));
     
     forAll(T, i) /* Loop on elements */
     {

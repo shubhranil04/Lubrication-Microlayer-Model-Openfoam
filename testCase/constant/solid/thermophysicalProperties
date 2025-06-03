@@ -13,6 +13,7 @@ FoamFile
     object      thermophysicalProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../runParams"
 
 thermoType
 {
@@ -34,7 +35,7 @@ mixture
 
     transport
     {
-	    kappa       401;
+	    kappa       $kappas;
         //kappaCoeffs<8> (7 0 0 0 0 0 0 0);
     }
 
@@ -42,13 +43,13 @@ mixture
     {
         Sf          0;
 	    Hf          0;
-        Cp          385;
+        Cp          $cps;
  
     }
 
     equationOfState
     {
-        rho         8960;
+        rho         $rhos;
     }
 }
 

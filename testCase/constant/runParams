@@ -5,7 +5,15 @@
 |   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
-
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      runParams;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Define mesh variables 
 Lx      1.5e-3;     // X length in m
 
@@ -33,9 +41,47 @@ Lz     #calc "$Lx*$theta/2*$pi/180";
 
 q	34e3; // Heat flux from heater in Watts
 
-// Contact angle 
+// Fluid params
+
+psat 	1.013e5;
+
+g	9.81;
+
+rhol 	958;
+
+mul	2.8e-4;
+
+betal	2.68e-4;
+
+cpl 	4.22e3;
+
+kappal	0.679;
+
+rhov 	0.597;
+
+muv	1.26e-5;
+
+betav	0.0029;
+
+cpv 	2.03e3;
+
+kappav	2.5e-2;
+
+hfg	2.26e6;
+
+sigma	0.059;
+
+Tsat 	373.15;
 
 CA	38.0;
+
+// Solid properties
+
+kappas 	401;
+
+cps	385;
+
+rhos	8960;
 
 // Initial Seed Radius
 
@@ -45,15 +91,20 @@ seedRadius	60e-6;
 
 seedCentreHeight	#calc "$seedRadius * cos($CA * $pi / 180)";
 
-// Saturation Temperature
+// Wall superheat
 
-Tsat 	373.15;
+dT	6.17;
 
 // Activation Temperature
 
-Tact	379.17;
+Tact	#calc "$Tsat + $dT";
 
 // Bulk Temperature
 
-Tbulk	373.15;
+Tbulk	$Tsat;
+
+// Thermal boundary layer thickness
+
+blThickness	#calc "7.14 * Foam::pow($mul * $kappal / ($rhol * $rhol * $cpl * $betal * $dT), 1./3)";
+
 

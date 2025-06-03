@@ -13,7 +13,7 @@ FoamFile
     object      topoSetDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-#include "runParams"
+#include "../constant/runParams"
 
 actions
 (

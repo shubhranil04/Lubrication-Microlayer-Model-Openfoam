@@ -14,12 +14,13 @@ FoamFile
     object      thermophysicalProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../runParams"
 
 phases (liquid vapor);
 
 pMin            pMin [ 1 -1 -2 0 0 0 0 ] 10000;
 
-sigma           sigma [ 1 0 -2 0 0 0 0 ] 5.9e-2;
+sigma           sigma [ 1 0 -2 0 0 0 0 ] $sigma;
 
 TMin           TMin [ 0 0 0 1 0 0 0 ] 50;
 TMax           TMax [ 0 0 0 1 0 0 0 ] 500;
@@ -36,7 +37,7 @@ vapor
 
 surfaceForces
 {
-  sigma 5.9e-2;
+  sigma $sigma;
   surfaceTensionForceModel RDF;
   accelerationModel gravity;
   deltaFunctionModel alphaCSF;

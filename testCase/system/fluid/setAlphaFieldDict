@@ -14,7 +14,7 @@ FoamFile
     object      fvSolution;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-#include "../runParams"
+#include "../../constant/runParams"
 
 field "alpha.liquid";
 type sphere;

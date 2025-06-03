@@ -15,9 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-kappa       2.5e-2;               // Thermal conductivity (W/m·K)
-mu          1.26e-05;                // Dynamic viscosity (kg/m·s)
-Cp          2030;                  // Specific heat capacity (J/kg·K)
+#include "../runParams"
 
 thermoType
 {
@@ -38,13 +36,13 @@ mixture
     }
     thermodynamics
     {
-        Cp          $Cp ;
+        Cp          $cpv ;
         Hf          0;
     }
     transport
     {
-        mu          $mu ;
-        Pr          #calc "$Cp * $mu / $kappa";
+        mu          $muv ;
+        Pr          #calc "$cpv * $muv / $kappav";
     }
 }
 

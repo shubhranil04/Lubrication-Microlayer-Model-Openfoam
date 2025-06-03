@@ -19,7 +19,7 @@ startFrom       latestTime;
 
 startTime       0;
 
-stopAt          endTime; //writeNow; //endTime;
+stopAt          writeNow; //writeNow; //endTime;
 
 endTime         0.03;
 
