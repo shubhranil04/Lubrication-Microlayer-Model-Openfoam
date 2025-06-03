@@ -22,40 +22,40 @@ FoamFile
     {
         type            wedge;
         inGroups        1(wedge);
-        nFaces          16800;
-        startFace       33260;
+        nFaces          25600;
+        startFace       50800;
     }
     back
     {
         type            wedge;
         inGroups        1(wedge);
-        nFaces          16800;
-        startFace       50060;
+        nFaces          25600;
+        startFace       76400;
     }
     right
     {
         type            patch;
-        nFaces          280;
-        startFace       66860;
+        nFaces          320;
+        startFace       102000;
     }
     bottom
     {
         type            patch;
-        nFaces          60;
-        startFace       67140;
+        nFaces          80;
+        startFace       102320;
     }
     top
     {
         type            patch;
-        nFaces          60;
-        startFace       67200;
+        nFaces          80;
+        startFace       102400;
     }
     axis
     {
         type            empty;
         inGroups        1(empty);
-        nFaces          280;
-        startFace       67260;
+        nFaces          320;
+        startFace       102480;
     }
 )
 

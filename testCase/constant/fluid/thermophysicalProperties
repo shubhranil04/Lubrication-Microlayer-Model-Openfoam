@@ -30,6 +30,12 @@ liquid
     type pureMovingPhaseModel;
 }
 
+Ri	$Ri;
+
+Qmicro 	$Qmicro;
+
+hm	$hm;
+
 vapor
 {
     type pureMovingPhaseModel;

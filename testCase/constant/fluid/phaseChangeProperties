@@ -17,7 +17,7 @@ FoamFile
 
 #include "../runParams"
 
-energySourceTermModel implicitGrad;
+energySourceTermModel implicitGradCLNB;
 
 selectedGradExplicitCoeffs
 {

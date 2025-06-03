@@ -75,6 +75,13 @@ Tsat 	373.15;
 
 CA	38.0;
 
+// Microregion properties
+Ri	6.38e-8;
+
+Qmicro	52.55;
+
+hm	6.11e-7;
+
 // Solid properties
 
 kappas 	401;
