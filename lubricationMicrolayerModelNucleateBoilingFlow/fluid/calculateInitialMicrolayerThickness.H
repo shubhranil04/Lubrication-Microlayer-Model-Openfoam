@@ -2,6 +2,8 @@ const word initialMicrolayerThicknessModel = microlayerDict.lookupOrDefault<word
 
 scalar initialMicrolayerThickness = microlayerDict.lookupOrDefault<scalar>("initialMicrolayerThickness", 0.0);
 
+scalar meniscusSlope = microlayerDict.lookupOrDefault<scalar>("meniscusSlope", 0.0);
+
 scalar meniscusCurvature = microlayerDict.lookupOrDefault<scalar>("meniscusCurvature", 0.0);
 
 if (initialMicrolayerThicknessModel == "linear")
@@ -93,14 +95,28 @@ else if (initialMicrolayerThicknessModel == "landauLevich")
 
     const scalar xbar = root;
 
+    const scalar temp = a3 * Foam::pow(Rb, 3) + a2 * Foam::pow(Rb, 2) + a1 * Rb + a0;
+
+    if (1-temp*temp > 0){
+        meniscusSlope = Foam::pow(temp*temp/(1-temp*temp), 0.5);
+    }
+    
+    else
+    {
+        meniscusSlope = 0.0;
+    }   
+
     meniscusCurvature = 3*a3*pow(xbar,2) + 2*a2*xbar + a1;
 
     const scalar meniscusRadius = 1.0 / meniscusCurvature;
 
     initialMicrolayerThickness = 1.34 * meniscusRadius * Foam::pow(muLiquid * Rbdot / sigma, 2.0/3.0);
 
-    Info << "Initial microlayer thickness = " << initialMicrolayerThickness*1e6 << " micrometers" << nl << "" << nl;
+    Info << "Initial microlayer thickness = " << initialMicrolayerThickness*1e6 << " micrometers" << nl;
+
+    Info << "Meniscus slope = " << meniscusSlope << nl << "" << nl;
 }
 
+microlayerDict.set("meniscusSlope", meniscusCurvature);
 microlayerDict.set("meniscusCurvature", meniscusCurvature);
 microlayerDict.set("initialMicrolayerThickness", initialMicrolayerThickness);
