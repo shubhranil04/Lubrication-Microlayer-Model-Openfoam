@@ -1,0 +1,57 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "../runParams"
+
+energySourceTermModel implicitGrad;
+
+selectedGradExplicitCoeffs
+{
+}
+
+implicitGradCoeffs
+{
+}
+
+SchrageCoeffs
+{
+}
+
+massSourceTermModel hardtWondraGasPhase;
+
+hardtWondraCoeffs
+{   
+}
+
+hardtWondraGasPhaseCoeffs
+{
+    spread 3;   
+}
+
+satProperties
+{
+    singleComponentSatProp function;
+    Tmin 100;
+    Tmax 500;
+    pSat constant $psat;
+    TSat constant $Tsat;
+    L constant $hfg;
+}
+
+
+
+// ************************************************************************* //

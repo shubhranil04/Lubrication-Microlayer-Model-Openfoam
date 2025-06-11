@@ -1,0 +1,56 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2306                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      p_rgh;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+#include "../../constant/runParams"
+
+internalField   uniform $psat;
+
+boundaryField
+{
+    fluid_to_solid
+    {
+        type            fixedFluxPressure;
+    }
+
+    top
+    {
+        type            totalPressure;
+        p0		uniform $psat;
+    }
+    
+    right
+    {
+    	type		zeroGradient;
+    }
+    
+    front
+    {
+        type            wedge;
+    }
+    
+    back
+    {
+        type            wedge;
+    }
+    
+    axis
+    {
+    	type		empty;
+    }
+}
+

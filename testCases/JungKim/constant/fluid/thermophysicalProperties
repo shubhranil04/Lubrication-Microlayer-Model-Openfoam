@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.3.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../runParams"
+
+phases (liquid vapor);
+
+pMin            pMin [ 1 -1 -2 0 0 0 0 ] 10000;
+
+sigma           sigma [ 1 0 -2 0 0 0 0 ] $sigma;
+
+TMin           TMin [ 0 0 0 1 0 0 0 ] 50;
+TMax           TMax [ 0 0 0 1 0 0 0 ] 500;
+
+liquid
+{
+    type pureMovingPhaseModel;
+}
+
+vapor
+{
+    type pureMovingPhaseModel;
+}
+
+surfaceForces
+{
+  sigma $sigma;
+  surfaceTensionForceModel RDF;
+  accelerationModel gravity;
+  deltaFunctionModel alphaCSF;
+}
+
+// ************************************************************************* //

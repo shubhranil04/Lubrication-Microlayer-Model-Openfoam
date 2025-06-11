@@ -1,0 +1,106 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  plus                                  |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "../constant/runParams"
+
+vertices
+(
+	(0 -$solidLy 0) 	// solid bottom left
+	($Lx -$solidLy $Lz)	// solid bottom right (front)
+	($Lx 0 $Lz)		// solid top right (front)
+	(0 0 0)			// solid top left
+	($Lx -$solidLy -$Lz)	// solid bottom right (back)
+	($Lx 0 -$Lz)		// solid top right (back)
+	
+	($Lx $fluidLy $Lz) 	// fluid top right (front)
+	($Lx $fluidLy -$Lz) 	// fluid top right (back)
+	(0 $fluidLy 0)		// fluid top left
+);
+
+blocks
+(
+	hex (0 1 4 0 3 2 5 3) ($nX  1 $solidnY) simpleGrading (1 1 1) // solid
+	hex (3 2 5 3 8 6 7 8) ($nX  1 $fluidnY) simpleGrading (1 1 1) // fluid
+);
+
+edges
+(
+	//arc 1 4 ($Lx 0 0)
+	//arc 2 5 ($Lx $Ly 0)
+);
+
+boundary
+(
+     front
+     { 
+           type wedge;
+           faces  
+           (
+               (0 1 2 3)
+               (3 2 6 8)
+           );
+      }
+      
+     back
+     { 
+           type wedge;
+           faces  
+           (
+               (0 4 5 3)
+               (3 5 7 8)
+           );
+      }
+     right
+     { 
+           type patch;
+           faces  
+           (
+               (1 4 5 2)
+               (2 5 7 6)
+           );
+      }
+     bottom
+     { 
+           type patch;
+           faces  
+           (
+               (0 4 1 0)
+           );
+      }
+     top
+     { 
+           type patch;
+           faces  
+           (
+               (8 7 6 8)
+           );
+      }
+     axis
+     { 
+           type empty;
+           faces  
+           (
+               (0 3 3 0)
+               (3 8 8 3)
+           );
+      }
+);
+ 
+mergePatchPairs
+(
+);
+
