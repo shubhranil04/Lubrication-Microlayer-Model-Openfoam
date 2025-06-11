@@ -1,9 +1,0 @@
-#!/bin/sh
-
-rm -rf 0
-
-rm -rf dynamicCode
-
-rm -rf VTK
-
-
