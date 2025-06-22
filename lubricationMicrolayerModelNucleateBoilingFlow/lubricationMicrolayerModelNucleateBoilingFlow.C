@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
         "Update and overwrite the existing mesh useful for adaptive mesh refinement");
 
     #include "initPETSC.H"
+    #include "petscFunctions.H"
     #define NO_CONTROL
     #define CREATE_MESH createMeshesPostProcess.H
     #include "postProcess.H"
@@ -142,6 +143,7 @@ int main(int argc, char *argv[])
     Info << "End\n"
          << endl;
 
+    #include "finalisePETSC.H"
     return 0;
 }
 

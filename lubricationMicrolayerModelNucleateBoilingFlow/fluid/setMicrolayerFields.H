@@ -14,12 +14,9 @@ volScalarField& microlayerMassSource = microlayerMassSourceFluid[i];
 
 IOdictionary& microlayerDict = microlayerDictFluid[i];
 
-// Petsc Objects 
+// PETSC objects
 
-// Not initialized in createMicrolayerFields yet
+MicrolayerContext& microlayerContext = microlayerContextFluid[i];
 
-//Vec& microlayerGrid = microlayerGridFluid[i];
 
-//Vec& microlayerThickness = microlayerThicknessFluid[i];
-
-//Info << "Successfully set PETSC fields" << nl;
+// ************************************************************************* //

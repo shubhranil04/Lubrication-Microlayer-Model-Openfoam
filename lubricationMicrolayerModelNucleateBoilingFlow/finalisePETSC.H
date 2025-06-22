@@ -1,0 +1,1 @@
+PetscCall(PetscFinalize());

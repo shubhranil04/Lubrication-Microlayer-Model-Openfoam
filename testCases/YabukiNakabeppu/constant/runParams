@@ -88,6 +88,8 @@ Qmicro	45.83;
 
 hm	3.69e-7;
 
+ls	10e-9; // slip length
+
 // Solid properties
 
 kappas 	148;
@@ -104,6 +106,7 @@ seedRadius	60e-6;
 
 seedCentreHeight	#calc "$seedRadius * cos($CA * $pi / 180)";
 
+
 // Wall superheat
 
 dT	10.8;
@@ -119,5 +122,23 @@ Tbulk	$Tsat;
 // Thermal boundary layer thickness
 
 blThickness	#calc "7.14 * Foam::pow($mul * $kappal / ($rhol * $rhol * $cpl * $betal * $dT), 1./3)";
+
+// Microlayer model properties
+
+// Initial Microlayer Length
+
+// Scriven growth constant
+growthConstant 			32.14;
+
+initialMicrolayerLength 	#calc "$seedRadius * sin($CA * $pi / 180)";
+
+desiredGridSize			1e-6;
+
+contactLineCapillaryNumber	0.6e-3;
+
+contactLineVelocity		#calc "$sigma * $contactLineCapillaryNumber / $mul";
+
+initialBubbleFootRadiusOfCurvature	1.8e-6;
+
 
 

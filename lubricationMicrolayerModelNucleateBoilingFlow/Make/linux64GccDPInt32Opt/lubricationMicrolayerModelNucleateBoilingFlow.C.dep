@@ -914,6 +914,7 @@ $(WM_PROJECT_DIR)/src/transportModels/interfaceProperties/lnInclude/alphaContact
 ../../src/phaseChange/lnInclude/massSourceTermModel.H \
 ../../src/phaseChange/lnInclude/macroModel.H \
 initPETSC.H \
+./fluid/petscFunctions.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/postProcess.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/addRegionOption.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/addFunctionObjectOptions.H \
@@ -950,6 +951,7 @@ readPIMPLEControls.H \
 ./fluid/alphaSuSp.H \
 ./fluid/findBubbleRadius.H \
 ./fluid/calculateInitialMicrolayerThickness.H \
+./fluid/solveMicrolayerModel.H \
 ./fluid/YEqns.H \
 ./fluid/UEqn.H \
 ./fluid/TEqn.H \
@@ -959,5 +961,6 @@ readPIMPLEControls.H \
 ./solid/setRegionSolidFields.H \
 ./solid/readSolidMultiRegionPIMPLEControls.H \
 ./solid/solveSolid.H \
+finalisePETSC.H \
 
 #END

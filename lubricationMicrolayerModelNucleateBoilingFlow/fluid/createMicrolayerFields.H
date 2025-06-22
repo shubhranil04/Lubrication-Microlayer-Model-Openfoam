@@ -14,10 +14,10 @@ PtrList<volScalarField> microlayerMassSourceFluid(fluidRegions.size());
 
 PtrList<IOdictionary> microlayerDictFluid(fluidRegions.size());
 
-// PETSC objects
-PtrList<Vec> microlayerGridFluid(fluidRegions.size());
 
-PtrList<Vec> microlayerThicknessFluid(fluidRegions.size());
+// PETSC objects
+
+PtrList<MicrolayerContext> microlayerContextFluid(fluidRegions.size());
 
 // Populate microlayer field pointer lists
 forAll(fluidRegions, i)
@@ -52,6 +52,7 @@ forAll(fluidRegions, i)
 
     );
 
+    
     bubbleRadius1Fluid.set(
         i,
         new scalar(0.0));
@@ -63,4 +64,15 @@ forAll(fluidRegions, i)
     dt12Fluid.set(
         i,
         new scalar(0.0));
+
+    Info << "*** Setting microlayer PETSC objects for region "
+         << fluidRegions[i].name() << nl << endl;
+
+    
+    microlayerContextFluid.set(
+        i,
+        new MicrolayerContext(microlayerDictFluid[i])
+    );
+
 }
+// ************************************************************************* //
