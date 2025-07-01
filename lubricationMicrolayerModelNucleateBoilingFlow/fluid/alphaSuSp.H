@@ -14,7 +14,7 @@ volScalarField::Internal Su(
     mesh,
     dimensionedScalar(dgdt.dimensions(), Zero));
 
-const volScalarField &alphaSource = phaseChange.alphaSource();
+const volScalarField& alphaSource = phaseChange.alphaSource(); 
 
 forAll(dgdt, celli)
 {
@@ -27,14 +27,14 @@ forAll(dgdt, celli)
     {
         Sp[celli] += dgdt[celli] / max(alpha1[celli], 1e-4);
     }
-    if (alphaSource[celli] > 0.0 && alpha1[celli] > 0.0)
+    if ((alphaSource[celli] + microlayerMassSource[celli]/rho1[celli])> 0.0 && alpha1[celli] > 0.0)
     {
         // Sp[celli] -= alphaSource[celli];
-        Su[celli] -= alphaSource[celli];
+        Su[celli] -= (alphaSource[celli] + microlayerMassSource[celli]/rho1[celli]);
     }
-    else if (alphaSource[celli] < 0.0 && alpha1[celli] < 1.0)
+    else if ((alphaSource[celli] + microlayerMassSource[celli]/rho1[celli]) < 0.0 && alpha1[celli] < 1.0)
     {
-        Su[celli] -= alphaSource[celli];
+        Su[celli] -= (alphaSource[celli] + microlayerMassSource[celli]/rho1[celli]);
     }
 }
 

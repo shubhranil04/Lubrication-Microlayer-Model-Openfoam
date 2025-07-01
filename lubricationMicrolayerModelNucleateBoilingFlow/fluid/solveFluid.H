@@ -82,6 +82,7 @@ phaseChange.correctSatProperties(p, T);
 #include "findBubbleRadius.H"
 #include "calculateInitialMicrolayerThickness.H"
 #include "solveMicrolayerModel.H"
+#include "calculateMicrolayerSourceTerms.H"
 
 #include "YEqns.H"
 

@@ -1,112 +1,114 @@
 // Look up PLIC normals and positions.
 
-const auto &meshPoints = mesh.points();
-const auto &meshFaces = mesh.faces();
-
-const auto &db = alpha1.db();
-
-const auto normalsName = IOobject::groupName(
-    "interfaceNormal",
-    alpha1.internalField().group());
-const auto centresName = IOobject::groupName(
-    "interfaceCentre",
-    alpha1.internalField().group());
-
-bool hasNormals = db.found(normalsName);
-bool hasCentres = db.found(centresName);
-
-// Get patch fields for interface normals and centers
-const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
-const fvPatch &patch = mesh.boundary()[patchIndex];
-
-bool isBubble = false;
-
-if (hasNormals && hasCentres)
 {
-    // Info << "Interpolating the PLIC" << nl;
-    const volVectorField &interfaceCentre =
-        db.lookupObject<volVectorField>(centresName);
+    const auto &meshPoints = mesh.points();
+    const auto &meshFaces = mesh.faces();
 
-    const volVectorField &interfaceNormal =
-        db.lookupObject<volVectorField>(normalsName);
+    const auto &db = alpha1.db();
 
-    const auto &pInterfaceCentres = interfaceCentre.boundaryField()[patchIndex];
-    const auto &pInterfaceNormals = interfaceNormal.boundaryField()[patchIndex];
+    const auto normalsName = IOobject::groupName(
+        "interfaceNormal",
+        alpha1.internalField().group());
+    const auto centresName = IOobject::groupName(
+        "interfaceCentre",
+        alpha1.internalField().group());
 
-    const auto pInternalCentresTmp = pInterfaceCentres.patchInternalField();
-    const auto pInternalNormalsTmp = pInterfaceNormals.patchInternalField();
+    bool hasNormals = db.found(normalsName);
+    bool hasCentres = db.found(centresName);
 
-    const auto &pInternalCentres = pInternalCentresTmp.cref();
-    const auto &pInternalNormals = pInternalNormalsTmp.cref();
+    // Get patch fields for interface normals and centers
+    const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
+    const fvPatch &patch = mesh.boundary()[patchIndex];
 
-    scalar numContactLineCells = 0.0;
-    scalar bubbleRadius = 0.0;
-
-    forAll(pInternalCentres, faceI)
+    if (hasNormals && hasCentres)
     {
-        bool hasContactLine = false;
+        // Info << "Interpolating the PLIC" << nl;
+        const volVectorField &interfaceCentre =
+            db.lookupObject<volVectorField>(centresName);
 
-        const vector &cellInterfaceNormal = pInternalNormals[faceI];
-        const vector &cellInterfaceCentre = pInternalCentres[faceI];
+        const volVectorField &interfaceNormal =
+            db.lookupObject<volVectorField>(normalsName);
 
-        const auto &thisFace = meshFaces[patch.start() + faceI];
+        const auto &pInterfaceCentres = interfaceCentre.boundaryField()[patchIndex];
+        const auto &pInterfaceNormals = interfaceNormal.boundaryField()[patchIndex];
 
-        // Get face points.
-        for (auto pointI = 0; pointI < (thisFace.size() - 1); ++pointI)
+        const auto pInternalCentresTmp = pInterfaceCentres.patchInternalField();
+        const auto pInternalNormalsTmp = pInterfaceNormals.patchInternalField();
+
+        const auto &pInternalCentres = pInternalCentresTmp.cref();
+        const auto &pInternalNormals = pInternalNormalsTmp.cref();
+
+        scalar numContactLineCells = 0.0;
+        scalar bubbleRadius = 0.0;
+
+        forAll(pInternalCentres, faceI)
         {
-            // Compute the signed distance of the first point.
-            const point &firstFacePoint = meshPoints[thisFace[pointI]];
-            const scalar firstDist = (firstFacePoint - cellInterfaceCentre) & cellInterfaceNormal;
+            bool hasContactLine = false;
 
-            // Compute the signed distance of the second point.
-            const point &secondFacePoint = meshPoints[thisFace[pointI + 1]];
-            const scalar secondDist = (secondFacePoint - cellInterfaceCentre) & cellInterfaceNormal;
+            const vector &cellInterfaceNormal = pInternalNormals[faceI];
+            const vector &cellInterfaceCentre = pInternalCentres[faceI];
 
-            if (firstDist * secondDist < 0)
+            const auto &thisFace = meshFaces[patch.start() + faceI];
+
+            // Get face points.
+            for (auto pointI = 0; pointI < (thisFace.size() - 1); ++pointI)
             {
-                hasContactLine = true;
-                break;
+                // Compute the signed distance of the first point.
+                const point &firstFacePoint = meshPoints[thisFace[pointI]];
+                const scalar firstDist = (firstFacePoint - cellInterfaceCentre) & cellInterfaceNormal;
+
+                // Compute the signed distance of the second point.
+                const point &secondFacePoint = meshPoints[thisFace[pointI + 1]];
+                const scalar secondDist = (secondFacePoint - cellInterfaceCentre) & cellInterfaceNormal;
+
+                if (firstDist * secondDist < 0)
+                {
+                    hasContactLine = true;
+                    break;
+                }
+            }
+
+            if (hasContactLine)
+            {
+                numContactLineCells += 1;
+                bubbleRadius += pInternalCentres[faceI].x();
             }
         }
 
-        if (hasContactLine)
+        if (numContactLineCells > 0)
         {
-            numContactLineCells += 1;
-            bubbleRadius += pInternalCentres[faceI].x();
+            isBubble = true;
+
+            bubbleRadius /= numContactLineCells;
+
+            scalar dt01 = runTime.deltaTValue();
+
+            scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01 + 1e-20);
+
+            scalar bubbleExpansionAcceleration = 2 / ((dt01 + 1e-20) * (dt12 + 1e-20) * (dt01 + dt12 + 1e-20)) * (bubbleRadius * dt12 * dt12 - bubbleRadius1 * (dt01 + dt12) * (dt01 + dt12) + bubbleRadius2 * dt01 * dt01);
+
+            Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
+            Info << "Bubble foot expansion velocity = " << bubbleExpansionVelocity << " m/s" << nl;
+            Info << "Bubble foot expansion acceleration = " << bubbleExpansionAcceleration << " m/s2" << nl << "" << nl;
+
+            microlayerDict.set("bubbleRadius", bubbleRadius);
+            microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
+            microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
+
+            bubbleRadius2 = bubbleRadius1;
+            bubbleRadius1 = bubbleRadius;
+
+            dt12 = dt01;
+        }
+        else
+        {
+            Info << "No contact line cells found" << nl << "" << nl;
         }
     }
 
-    if (numContactLineCells > 0)
-    {
-        bubbleRadius /= numContactLineCells;
-
-        scalar dt01 = runTime.deltaTValue();
-
-        scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01 + 1e-20);
-
-        scalar bubbleExpansionAcceleration = 2 / ((dt01 + 1e-20) * (dt12 + 1e-20) * (dt01 + dt12 + 1e-20)) * (bubbleRadius * dt12 * dt12 - bubbleRadius1 * (dt01 + dt12) * (dt01 + dt12) + bubbleRadius2 * dt01 * dt01);
-
-        Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
-        Info << "Bubble foot expansion velocity = " << bubbleExpansionVelocity << " m/s" << nl;
-        Info << "Bubble foot expansion acceleration = " << bubbleExpansionAcceleration << " m/s2" << nl << "" << nl;
-
-        microlayerDict.set("bubbleRadius", bubbleRadius);
-        microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
-        microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
-
-        bubbleRadius2 = bubbleRadius1;
-        bubbleRadius1 = bubbleRadius;
-
-        dt12 = dt01;
-    }
     else
     {
-        Info << "No contact line cells found" << nl << "" << nl;
+        Info << "No normals and centres found" << nl;
     }
-}
-
-else
-{
-    Info << "No normals and centres found" << nl;
 }
 // ************************************************************************* //

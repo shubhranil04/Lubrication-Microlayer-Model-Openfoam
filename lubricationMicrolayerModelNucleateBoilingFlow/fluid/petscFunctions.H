@@ -8,6 +8,7 @@
 
 struct MicrolayerContext
 {   
+    PetscBool isMl; // Flag to indicate if microlayer is present
     // contactline position, microlayer length, desired grid size, actual grid size time step
     PetscScalar xCl, l, dsReq, ds, dt; 
     PetscInt n; // number of grid points
@@ -27,6 +28,11 @@ struct MicrolayerContext
         // Initialize PETSC context with microlayer properties
         xCl = microlayerDict.lookupOrDefault<Foam::scalar>("initialContactLinePosition", 0.0);
         l = microlayerDict.get<Foam::scalar>("microlayerLength");
+        if (l > 0)
+        {
+            isMl = PETSC_TRUE; // Microlayer is present
+        }
+
         dsReq = microlayerDict.lookupOrDefault<Foam::scalar>("desiredGridSize", 1e-6);
         n = int(l / dsReq) + 1;
         ds =  l / (n - 1);  
@@ -78,6 +84,10 @@ struct MicrolayerContext
 PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_);
 
 PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_);
+
+PetscErrorCode computeHeatFlux(void *ctx_);
+
+PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_);
 
 #endif
 

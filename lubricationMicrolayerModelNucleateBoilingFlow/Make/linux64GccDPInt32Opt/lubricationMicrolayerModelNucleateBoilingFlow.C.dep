@@ -952,6 +952,7 @@ readPIMPLEControls.H \
 ./fluid/findBubbleRadius.H \
 ./fluid/calculateInitialMicrolayerThickness.H \
 ./fluid/solveMicrolayerModel.H \
+./fluid/calculateMicrolayerSourceTerms.H \
 ./fluid/YEqns.H \
 ./fluid/UEqn.H \
 ./fluid/TEqn.H \

@@ -11,25 +11,25 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     PetscCall(VecGetSize(h, &n));
 
     // Fluid properties
-    PetscScalar sigma = ctx->sigma; // Surface tension
-    PetscScalar mul = ctx->mul;     // Viscosity
-    PetscScalar rhol = ctx->rhol;   // Liquid density
-    PetscScalar Ri = ctx->Ri;       // Interface Heat Transfer Resistance
+    PetscScalar sigma = ctx->sigma;   // Surface tension
+    PetscScalar mul = ctx->mul;       // Viscosity
+    PetscScalar rhol = ctx->rhol;     // Liquid density
+    PetscScalar Ri = ctx->Ri;         // Interface Heat Transfer Resistance
     PetscScalar kappal = ctx->kappal; // Thermal conductivity
-    PetscScalar Tsat = ctx->Tsat;   // Saturation temperature
-    PetscScalar hfg = ctx->hfg;     // Heat of vaporization
+    PetscScalar Tsat = ctx->Tsat;     // Saturation temperature
+    PetscScalar hfg = ctx->hfg;       // Heat of vaporization
 
     // For now, assume constant wall temperature
     PetscScalar Tw = ctx->Tw; // Wall temperature
     // Model parameters
-    PetscScalar ds = ctx->ds;            // Grid size
-    PetscScalar dt = ctx->dt;            // Time step
-    PetscScalar delm = ctx->delm;        // Microregion height
-    PetscScalar delM = ctx->delM; // Matching thickness at end of microlayer
-    PetscScalar rc = ctx->rc;            // Bubble foot radius of curvature
-    PetscScalar ls = ctx->ls;            // Slip length
-    PetscScalar ucl = ctx->ucl;          // Contact line speed
-    PetscScalar theta = ctx->thetaApp;   // Apparent contact angle
+    PetscScalar ds = ctx->ds;          // Grid size
+    PetscScalar dt = ctx->dt;          // Time step
+    PetscScalar delm = ctx->delm;      // Microregion height
+    PetscScalar delM = ctx->delM;      // Matching thickness at end of microlayer
+    PetscScalar rc = ctx->rc;          // Bubble foot radius of curvature
+    PetscScalar ls = ctx->ls;          // Slip length
+    PetscScalar ucl = ctx->ucl;        // Contact line speed
+    PetscScalar theta = ctx->thetaApp; // Apparent contact angle
 
     // Current State
     Vec hn = ctx->h; // Current interface profile
@@ -84,28 +84,22 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscCall(VecGetSize(h, &n));
 
     // Fluid properties
-    PetscScalar sigma = ctx->sigma; // Surface tension
-    PetscScalar mul = ctx->mul;     // Viscosity
-    PetscScalar rhol = ctx->rhol;   // Liquid density
-    PetscScalar Ri = ctx->Ri;       // Interface Heat Transfer Resistance
+    PetscScalar sigma = ctx->sigma;   // Surface tension
+    PetscScalar mul = ctx->mul;       // Viscosity
+    PetscScalar rhol = ctx->rhol;     // Liquid density
+    PetscScalar Ri = ctx->Ri;         // Interface Heat Transfer Resistance
     PetscScalar kappal = ctx->kappal; // Thermal conductivity
-    PetscScalar Tsat = ctx->Tsat;   // Saturation temperature
-    PetscScalar hfg = ctx->hfg;     // Heat of vaporization
+    PetscScalar Tsat = ctx->Tsat;     // Saturation temperature
+    PetscScalar hfg = ctx->hfg;       // Heat of vaporization
 
     // For now, assume constant wall temperature
     PetscScalar Tw = ctx->Tw; // Wall temperature
     // Model parameters
-    PetscScalar ds = ctx->ds;            // Grid size
-    PetscScalar dt = ctx->dt;            // Time step
-    PetscScalar delm = ctx->delm;        // Microregion height
-    PetscScalar delM = ctx->delM; // Matching thickness at end of microlayer
-    PetscScalar rc = ctx->rc;            // Bubble foot radius of curvature
-    PetscScalar ls = ctx->ls;            // Slip length
-    PetscScalar ucl = ctx->ucl;          // Contact line speed
-    PetscScalar theta = ctx->thetaApp;   // Apparent contact angle
+    PetscScalar ds = ctx->ds; // Grid size
+    PetscScalar dt = ctx->dt; // Time step
 
-    // Current State
-    Vec hn = ctx->h; // Current interface profile
+    PetscScalar ls = ctx->ls;   // Slip length
+    PetscScalar ucl = ctx->ucl; // Contact line speed
 
     PetscFunctionBeginUser;
     PetscCall(VecGetArrayRead(h, &hp));
@@ -125,9 +119,9 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
         A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
 
-        A[2] = - dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds);
+        A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds);
 
-        A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Tw - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal ;
+        A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Tw - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal;
 
         A[5] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
 
@@ -208,4 +202,102 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode computeHeatFlux(void *ctx_)
+{
+    MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
+    // Fluid properties
+    PetscScalar Ri = ctx->Ri;         // Interface Heat Transfer Resistance
+    PetscScalar kappal = ctx->kappal; // Thermal conductivity
+    PetscScalar Tsat = ctx->Tsat;     // Saturation temperature
+
+    // For now, assume constant wall temperature
+    PetscScalar Tw = ctx->Tw; // Wall temperature
+
+    // Current State
+    Vec h = ctx->h; // Current interface profile
+
+    VecDuplicate(h, &ctx->q);
+
+    Vec q = ctx->q; // Heat flux vector
+
+    // Get access to the array data
+    const PetscScalar *hp;
+    PetscScalar *qp;
+    PetscInt n;
+
+    PetscCall(VecGetSize(h, &n));
+    PetscCall(VecGetArrayRead(h, &hp));
+    PetscCall(VecGetArray(q, &qp));
+
+    for (PetscInt i = 0; i < n; ++i)
+    {
+        qp[i] = (Tw - Tsat) / (Ri + hp[i] / kappal);
+    }
+
+    VecRestoreArrayRead(h, &hp);
+    VecRestoreArray(q, &qp);
+
+    return PETSC_SUCCESS;
+}
+
+PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
+{
+
+    MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
+
+    if (!ctx->isMl)
+    {
+        // If microlayer is not present, return 0
+        return 0.0;
+    }
+    
+    const PetscScalar *xp, *qp; 
+    Vec q = ctx->q;
+    Vec x = ctx->x;
+    PetscInt n;
+
+    PetscCall(VecGetSize(q, &n));
+    PetscCall(VecGetArrayRead(x, &xp));
+    PetscCall(VecGetArrayRead(q, &qp));
+
+    PetscScalar integral = 0.0;
+    PetscScalar length = 0.0;
+    PetscBool first = PETSC_TRUE;
+
+    if (xMax <= xp[0] || xMin >= xp[n-1])
+    {
+        // If the range is outside the grid, return 0
+        PetscCall(VecRestoreArrayRead(q, &qp));
+        PetscCall(VecRestoreArrayRead(x, &xp));
+        return 0.0;
+    }
+
+    for (PetscInt i = 0; i < n; ++i)
+    {
+        if (xp[i] >= xMin && xp[i] <= xMax)
+        {
+            if (first)
+            {
+                PetscScalar dx = xp[i] - xMin;
+                PetscScalar avgQ = qp[i];
+                integral += avgQ * dx;
+                length += dx;
+                first = PETSC_FALSE;
+            }
+
+            else
+            {
+                PetscScalar dx = xp[i] - xp[i-1];
+                PetscScalar avgQ = (qp[i] + qp[i-1]) / 2.0; // Trapezoidal rule
+                integral += avgQ * dx;
+                length += dx;
+            }
+            
+        }
+    }
+
+    PetscCall(VecRestoreArrayRead(q, &qp));
+
+    return integral / length; // Mean flux
+}
 // ************************************************************************* //

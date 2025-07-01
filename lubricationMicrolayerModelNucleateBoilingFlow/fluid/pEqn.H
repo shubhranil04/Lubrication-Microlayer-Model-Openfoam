@@ -59,7 +59,7 @@
     for (int nonOrth = 0; nonOrth <= nNonOrthCorr; nonOrth++)
     {
         fvScalarMatrix p_rghEqnIncomp(
-            fvc::div(phiHbyA) - fvm::laplacian(rAUf, p_rgh) - phaseChange.massSource() / rho);
+            fvc::div(phiHbyA) - fvm::laplacian(rAUf, p_rgh) - phaseChange.massSource() / rho - microlayerMassSource / rho) ;
 
         solve(
             p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp,

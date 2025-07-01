@@ -1,5 +1,6 @@
 // Bubble Objects
 
+bool isBubble = false;
 scalar& bubbleRadius1 = bubbleRadius1Fluid[i];
 
 scalar& bubbleRadius2 = bubbleRadius2Fluid[i];
