@@ -1,7 +1,7 @@
 fluid/multiCourantNo.C
 solid/solidRegionDiffNo.C
 lubricationMicrolayerModelNucleateBoilingFlow.C
-fluid/petscFunctions.C
+petscFunctions.C
 
 EXE = $(FOAM_USER_APPBIN)/lubricationMicrolayerModelNucleateBoilingFlow
 

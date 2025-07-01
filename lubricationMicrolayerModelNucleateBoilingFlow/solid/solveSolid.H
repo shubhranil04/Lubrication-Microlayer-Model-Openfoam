@@ -8,6 +8,8 @@ if(overwrite)
     continue;
 }
 
+#include "calculateSolidMicrolayerSourceTerms.H"
+
 {
     for (int nonOrth=0; nonOrth<=nNonOrthCorr; ++nonOrth)
     {
@@ -20,7 +22,8 @@ if(overwrite)
              : fvm::laplacian(betav*taniAlpha(), h, "laplacian(alpha,h)")
             )
           ==
-            fvOptions(rho, h)
+            fvOptions(rho, h) + microlayerHeatSource
+
         );
 
         hEqn.relax();

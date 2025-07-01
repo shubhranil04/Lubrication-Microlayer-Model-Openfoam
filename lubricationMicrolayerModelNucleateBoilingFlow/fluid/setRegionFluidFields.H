@@ -70,4 +70,4 @@ volScalarField &K = KFluid[i];
 fv::options &fvOptions = fvOptionsFluid[i];
 IOMRFZoneList &MRF = MRFfluid[i];
 
-#include "setMicrolayerFields.H"
+#include "setFluidMicrolayerFields.H"

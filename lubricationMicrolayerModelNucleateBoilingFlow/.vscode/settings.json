@@ -81,6 +81,11 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "stdfloat": "cpp",
-        "__nullptr": "cpp"
+        "__nullptr": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "__tree": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
     }
 }

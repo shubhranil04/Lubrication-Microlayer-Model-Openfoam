@@ -914,7 +914,7 @@ $(WM_PROJECT_DIR)/src/transportModels/interfaceProperties/lnInclude/alphaContact
 ../../src/phaseChange/lnInclude/massSourceTermModel.H \
 ../../src/phaseChange/lnInclude/macroModel.H \
 initPETSC.H \
-./fluid/petscFunctions.H \
+petscFunctions.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/postProcess.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/addRegionOption.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/addFunctionObjectOptions.H \
@@ -930,8 +930,9 @@ createMeshes.H \
 ./solid/createSolidMeshes.H \
 createFields.H \
 ./solid/createSolidFields.H \
+./solid/createSolidMicrolayerFields.H \
 ./fluid/createFluidFields.H \
-./fluid/createMicrolayerFields.H \
+./fluid/createFluidMicrolayerFields.H \
 ./fluid/initContinuityErrs.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/createTimeControls.H \
 ./solid/readSolidTimeControls.H \
@@ -941,7 +942,7 @@ $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/readTimeControls.H \
 readPIMPLEControls.H \
 ./include/setMultiRegionDeltaT.H \
 ./fluid/setRegionFluidFields.H \
-./fluid/setMicrolayerFields.H \
+./fluid/setFluidMicrolayerFields.H \
 ./fluid/readFluidMultiRegionPIMPLEControls.H \
 ./fluid/solveFluid.H \
 ./fluid/correctPhi.H \
@@ -960,8 +961,10 @@ readPIMPLEControls.H \
 ./fluid/pEqn.H \
 ./fluid/rhofs.H \
 ./solid/setRegionSolidFields.H \
+./solid/setSolidMicrolayerFields.H \
 ./solid/readSolidMultiRegionPIMPLEControls.H \
 ./solid/solveSolid.H \
+./solid/calculateSolidMicrolayerSourceTerms.H \
 finalisePETSC.H \
 
 #END
