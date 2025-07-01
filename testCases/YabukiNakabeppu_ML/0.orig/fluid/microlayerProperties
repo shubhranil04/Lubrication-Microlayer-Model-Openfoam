@@ -1,0 +1,65 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2106                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    arch        "LSB;label=32;scalar=64";
+    class       dictionary;
+    location    "constant/fluid";
+    object      microlayerProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "../../constant/runParams"
+
+// Initial Microlayer Thickness Model 
+
+//initialMicrolayerThicknessModel linear;
+
+//cSlope          0.001;
+
+initialMicrolayerThicknessModel landauLevichScriven;
+
+growthConstant		32.14;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Dewetting Model Parameters
+
+rhol			$rhol;
+mul			$mul;
+sigma			$sigma;
+kappal 			$kappal;
+cpl 			$cpl;
+hfg 			$hfg;
+Tsat			$Tsat;
+Ri			$Ri;
+thetaApp		$CA;
+ls			$ls;
+
+Tw			$Tact;
+
+initialContactLinePosition	0;
+
+microregionHeight	$hm;
+
+microlayerLength	$initialMicrolayerLength;
+
+desiredGridSize		$desiredGridSize;
+
+contactLineVelocity	$contactLineVelocity;
+
+bubbleFootRadiusOfCurvature	$initialBubbleFootRadiusOfCurvature;	
+
+
+
+
+
+
+// ************************************************************************* //

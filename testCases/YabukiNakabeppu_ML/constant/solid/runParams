@@ -1,0 +1,123 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.0.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      runParams;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Define mesh variables 
+Lx      5e-3;     // X length in m
+
+fluidLy  10e-3;    // Fluid Y length in m
+
+solidLy  0.18e-3;     // Solid Y length in m
+
+dx     0.025e-3;   // Grid size in m (25 micrometers)
+
+dySolid	 5e-6;
+
+dyFluid	0.025e-3;
+
+theta   5.0;     // Wedge Angle in degrees (5 degrees)
+
+pi 	3.14159265359;
+
+// Derived quantities
+
+Ly  #calc "$fluidLy + $solidLy";  // Total Y length in mm
+
+nX     #calc "$Lx / $dx";          // Number of cells in x-direction
+
+solidnY     #calc "$solidLy / $dySolid";    // Number of cells in y-direction
+
+fluidnY     #calc "$fluidLy / $dyFluid";
+
+Lz     #calc "$Lx*$theta/2*$pi/180";
+
+// Heat Flux
+
+q	33.3e3; // Heat flux from heater in Watts
+
+// Fluid params
+
+psat 	1.013e5;
+
+g	9.81;
+
+rhol 	958;
+
+mul	2.8e-4;
+
+betal	2.68e-4;
+
+cpl 	4.22e3;
+
+kappal	0.679;
+
+rhov 	0.597;
+
+muv	1.26e-5;
+
+betav	0.0029;
+
+cpv 	2.03e3;
+
+kappav	2.5e-2;
+
+hfg	2.26e6;
+
+sigma	0.059;
+
+Tsat 	373.15;
+
+CA	23.0;
+
+// Microregion properties
+Ri	6.38e-8;
+
+Qmicro	45.83;
+
+hm	3.69e-7;
+
+// Solid properties
+
+kappas 	148;
+
+cps	766;
+
+rhos	2330;
+
+// Initial Seed Radius
+
+seedRadius	60e-6;
+
+// Initial Seed height
+
+seedCentreHeight	#calc "$seedRadius * cos($CA * $pi / 180)";
+
+// Wall superheat
+
+dT	10.8;
+
+// Activation Temperature
+
+Tact	#calc "$Tsat + $dT";
+
+// Bulk Temperature
+
+Tbulk	$Tsat;
+
+// Thermal boundary layer thickness
+
+blThickness	#calc "7.14 * Foam::pow($mul * $kappal / ($rhol * $rhol * $cpl * $betal * $dT), 1./3)";
+
+
