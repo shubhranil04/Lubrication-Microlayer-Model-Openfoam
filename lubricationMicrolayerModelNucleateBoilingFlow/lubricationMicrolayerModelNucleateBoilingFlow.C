@@ -63,6 +63,7 @@ Description
 
 #include <petscsnes.h>
 #include <boost/math/tools/roots.hpp>
+#include <boost/math/interpolators/makima.hpp>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 static char help[] = "Phase change solver for nucleate boiling with lubrication theory based microlayer model.\n";

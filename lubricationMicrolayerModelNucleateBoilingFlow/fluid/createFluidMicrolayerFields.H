@@ -10,10 +10,11 @@ PtrList<scalar> dt12Fluid(fluidRegions.size());
 
 // FOAM objects
 
-PtrList<volScalarField> microlayerMassSourceFluid(fluidRegions.size());
+PtrList<volScalarField> sharpMicrolayerMassSourceFluid(fluidRegions.size());
+
+PtrList<volScalarField> spreadMicrolayerMassSourceFluid(fluidRegions.size());
 
 PtrList<IOdictionary> microlayerDictFluid(fluidRegions.size());
-
 
 // PETSC objects
 
@@ -25,17 +26,30 @@ forAll(fluidRegions, i)
     Info << "*** Initializing microlayer mass source for region "
          << fluidRegions[i].name() << nl << endl;
 
-    microlayerMassSourceFluid.set(
+    sharpMicrolayerMassSourceFluid.set(
         i,
         new volScalarField(
             IOobject(
-                "microlayerMassSource",
+                "sharpMicrolayerMassSource",
                 runTime.timeName(),
                 fluidRegions[i],
                 IOobject::NO_READ,
                 IOobject::AUTO_WRITE),
             fluidRegions[i],
-            dimensionedScalar("microlayerMassSource", dimMass / (dimLength * dimLength * dimLength * dimTime), 0)));
+            dimensionedScalar("sharpMicrolayerMassSource", dimMass / (dimLength * dimLength * dimLength * dimTime), 0)));
+
+    spreadMicrolayerMassSourceFluid.set(
+        i,
+        new volScalarField(
+            IOobject(
+                "spreadMicrolayerMassSource",
+                runTime.timeName(),
+                fluidRegions[i],
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE),
+            fluidRegions[i],
+            dimensionedScalar("spreadMicrolayerMassSource", dimMass / (dimLength * dimLength * dimLength * dimTime), 0),
+            "zeroGradient"));
 
     Info << "*** Reading microlayer properties for region "
          << fluidRegions[i].name() << nl << endl;
@@ -48,11 +62,10 @@ forAll(fluidRegions, i)
                 runTime.timeName(),
                 fluidRegions[i],
                 IOobject::MUST_READ_IF_MODIFIED,
-                IOobject::AUTO_WRITE ))
+                IOobject::AUTO_WRITE))
 
     );
 
-    
     bubbleRadius1Fluid.set(
         i,
         new scalar(0.0));
@@ -68,11 +81,8 @@ forAll(fluidRegions, i)
     Info << "*** Setting microlayer PETSC objects for region "
          << fluidRegions[i].name() << nl << endl;
 
-    
     microlayerContextFluid.set(
         i,
-        new MicrolayerContext(microlayerDictFluid[i])
-    );
-
+        new MicrolayerContext(microlayerDictFluid[i]));
 }
 // ************************************************************************* //

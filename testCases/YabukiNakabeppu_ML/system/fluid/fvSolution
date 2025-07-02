@@ -37,6 +37,14 @@ solvers
 
     }
 
+    spreadMicrolayerMassSourceFinal
+    {
+        solver           PCG;
+        preconditioner   DIC;
+        tolerance        1e-7;
+        relTol           0.00;
+    }
+    
     psiFinal
     {
         solver           PCG;

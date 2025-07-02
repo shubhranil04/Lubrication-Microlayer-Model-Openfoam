@@ -4,6 +4,8 @@
 #include <petscsnes.h>
 #include "volFields.H"
 #include "fvMesh.H"
+#include <boost/math/interpolators/makima.hpp>
+
 // Define PETSC Context struct
 
 struct MicrolayerContext
@@ -68,11 +70,16 @@ struct MicrolayerContext
         VecGetArray(x, &xp);
         VecGetArray(h, &hp);
 
+        std::vector<double> xSp = {0, 0.1 * l, 0.2 * l, 0.22 * l, 0.3 * l, 0.4 * l, 0.5 * l, 0.6 * l, 0.7 * l, 0.8 * l, 1.001*l};
+        std::vector<double> ySp = {0, 1.05 * delM, 0.52 * delM, 0.35 * delM, 0.45 * delM, 0.59 * delM, 0.73 * delM, 0.86 * delM, 0.95 * delM, 1.25 * delM, 1.5 * delM};
+
+        auto spline = boost::math::interpolators::makima<std::vector<double>>(std::move(xSp), std::move(ySp));
+
         for (PetscInt i = 0; i < n; i++)
         {
             sp[i] = i * ds;
             xp[i] = xCl + i * ds;
-            hp[i] = delM * i * ds / l; // Initial microlayer thickness (wedge shape)
+            hp[i] = spline(i * ds); //delM * i * ds / l; // Initial microlayer thickness (wedge shape)
         }
 
         VecRestoreArray(s, &sp);

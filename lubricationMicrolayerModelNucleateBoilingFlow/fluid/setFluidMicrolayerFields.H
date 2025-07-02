@@ -11,7 +11,9 @@ scalar& dt12 = dt12Fluid[i];
 
 // FOAM objects
 
-volScalarField& microlayerMassSource = microlayerMassSourceFluid[i];
+volScalarField& sharpMicrolayerMassSource = sharpMicrolayerMassSourceFluid[i];
+
+volScalarField& spreadMicrolayerMassSource = spreadMicrolayerMassSourceFluid[i];
 
 IOdictionary& microlayerDict = microlayerDictFluid[i];
 
