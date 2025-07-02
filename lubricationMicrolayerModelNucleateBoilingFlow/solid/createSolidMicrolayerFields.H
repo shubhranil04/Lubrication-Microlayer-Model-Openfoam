@@ -1,14 +1,14 @@
 // FOAM objects
 
-PtrList<volScalarField> microlayerHeatSourceFluid(fluidRegions.size());
+PtrList<volScalarField> microlayerHeatSourceSolid(solidRegions.size());
 
 // Populate microlayer field pointer lists
-forAll(fluidRegions, i)
+forAll(solidRegions, i)
 {
     Info << "*** Initializing microlayer heat source for region "
          << solidRegions[i].name() << nl << endl;
 
-    microlayerHeatSourceFluid.set(
+    microlayerHeatSourceSolid.set(
         i,
         new volScalarField(
             IOobject(

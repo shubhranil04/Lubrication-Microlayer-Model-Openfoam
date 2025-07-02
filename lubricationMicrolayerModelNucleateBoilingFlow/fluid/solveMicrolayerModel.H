@@ -189,5 +189,8 @@
         PetscCall(VecDestroy(&r));
         PetscCall(MatDestroy(&J));
         PetscCall(SNESDestroy(&snes));
+
+        // Compute heat flux
+        computeHeatFlux(&microlayerContext);
     }
 }

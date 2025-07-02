@@ -6,6 +6,7 @@
     const label patchIndex = mesh.boundaryMesh().findPatchID("solid_to_fluid");
     const fvPatch &patch = mesh.boundary()[patchIndex];
     const PetscInt nBoundaryFaces = patch.size();
+    
     PetscScalar *boundaryPoints = new PetscScalar[nBoundaryFaces + 1];
 
     // Loop over faces in the patch
@@ -45,6 +46,8 @@
         scalar cellVolume = mesh.V()[ownerCellI];
 
         PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
+
+        Info << "Cell " << ownerCellI << ": Heat flux = " << cellHeatFlux << nl;
 
         microlayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
 

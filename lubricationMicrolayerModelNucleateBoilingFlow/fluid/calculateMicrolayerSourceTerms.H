@@ -3,8 +3,6 @@
 {
     Info << "Calculating microlayer source terms ... " << nl;
 
-    // Compute heat flux
-    computeHeatFlux(&microlayerContext);
 
     const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
     const fvPatch &patch = mesh.boundary()[patchIndex];
