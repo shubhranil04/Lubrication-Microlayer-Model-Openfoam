@@ -93,15 +93,8 @@
 
             microlayerDict.set("bubbleRadius", bubbleRadius);
 
-            if (mag(bubbleExpansionVelocity) < 1e3)
-            {
-                microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
-                microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
-            }
-            else
-            {
-                Warning << "Bubble expansion velocity is too high: " << bubbleExpansionVelocity << " m/s" << nl;
-            }
+            microlayerDict.set("bubbleExpansionVelocity", bubbleExpansionVelocity);
+            microlayerDict.set("bubbleExpansionAcceleration", bubbleExpansionAcceleration);
 
             bubbleRadius2 = bubbleRadius1;
             bubbleRadius1 = bubbleRadius;

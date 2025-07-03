@@ -27,7 +27,7 @@ struct MicrolayerContext
     PetscScalar Tw;
 
     MicrolayerContext(Foam::IOdictionary &microlayerDict)
-    {   
+    {
         // Read fluid properties from the dictionary
         rhol = microlayerDict.get<Foam::scalar>("rhol");
         mul = microlayerDict.get<Foam::scalar>("mul");
@@ -59,65 +59,70 @@ struct MicrolayerContext
         ucl = microlayerDict.get<Foam::scalar>("contactLineVelocity");
         thetaApp = microlayerDict.get<Foam::scalar>("thetaApp");
         delm = microlayerDict.lookupOrDefault<Foam::scalar>("microregionHeight", 1e-7);
-        //del0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialMicrolayerThickness", 1e-6);
-        //rc = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleFootRadiusOfCurvature", 1e-6);
 
-        std::cout << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution for initial condition" << std::endl;
+        del0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialMicrolayerThickness", -1e6);
+        rc = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleFootRadiusOfCurvature", -1e6);
 
-        const Foam::scalar alphal = kappal / (rhol * cpl);
-
-        const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
-
-        const Foam::scalar Rb = xCl + l;
-
-        const Foam::scalar Rbdot = 2 * B * B * alphal / Rb;
-
-        const Foam::scalar Rbddot = -4 * Foam::pow(B, 4) * Foam::pow(alphal, 2) / Foam::pow(Rb, 3);
-
-        // Coefficients
-
-        const Foam::scalar a3 = rhol / sigma * (Foam::pow(Rbdot / Rb, 2.0) - Rbddot / (3 * Rb));
-
-        const Foam::scalar a2 = -rhol * Rbddot / (2 * sigma);
-
-        const Foam::scalar a1 = 1 / Rb;
-
-        const Foam::scalar a0 = -1;
-
-        struct CubicFunction
+        if (del0 < 0 || rc < 0)
         {
-            Foam::scalar a, b, c, d;
+            // If initial microlayer thickness or bubble foot radius of curvature is not set, calculate them
 
-            std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
+            std::cout << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution for initial condition" << std::endl;
+
+            const Foam::scalar alphal = kappal / (rhol * cpl);
+
+            const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
+
+            const Foam::scalar Rb = xCl + l;
+
+            const Foam::scalar Rbdot = 2 * B * B * alphal / Rb;
+
+            const Foam::scalar Rbddot = -4 * Foam::pow(B, 4) * Foam::pow(alphal, 2) / Foam::pow(Rb, 3);
+
+            // Coefficients
+
+            const Foam::scalar a3 = rhol / sigma * (Foam::pow(Rbdot / Rb, 2.0) - Rbddot / (3 * Rb));
+
+            const Foam::scalar a2 = -rhol * Rbddot / (2 * sigma);
+
+            const Foam::scalar a1 = 1 / Rb;
+
+            const Foam::scalar a0 = -1;
+
+            struct CubicFunction
             {
-                Foam::scalar fx = a * x * x * x + b * x * x + c * x + d;
-                Foam::scalar dfx = 3 * a * x * x + 2 * b * x + c;
-                return std::make_pair(fx, dfx);
-            }
-        };
+                Foam::scalar a, b, c, d;
 
-        CubicFunction f{a3, a2, a1, a0};
+                std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
+                {
+                    Foam::scalar fx = a * x * x * x + b * x * x + c * x + d;
+                    Foam::scalar dfx = 3 * a * x * x + 2 * b * x + c;
+                    return std::make_pair(fx, dfx);
+                }
+            };
 
-        const Foam::scalar guess = 1e-6;
-        const Foam::scalar min = -100.0;
-        const Foam::scalar max = 100.0;
-        const int digits = std::numeric_limits<Foam::scalar>::digits;
+            CubicFunction f{a3, a2, a1, a0};
 
-        Foam::scalar root = boost::math::tools::newton_raphson_iterate(
-            f, guess, min, max, digits);
+            const Foam::scalar guess = 1e-6;
+            const Foam::scalar min = -100.0;
+            const Foam::scalar max = 100.0;
+            const int digits = std::numeric_limits<Foam::scalar>::digits;
 
-        const Foam::scalar xbar = root;
+            Foam::scalar root = boost::math::tools::newton_raphson_iterate(
+                f, guess, min, max, digits);
 
-        const Foam::scalar meniscusCurvature = 3 * a3 * pow(xbar, 2) + 2 * a2 * xbar + a1;
+            const Foam::scalar xbar = root;
 
-        rc = 1.0 / meniscusCurvature;
+            const Foam::scalar meniscusCurvature = 3 * a3 * pow(xbar, 2) + 2 * a2 * xbar + a1;
 
-        del0 = 1.34 * rc * Foam::pow(mul * Rbdot / sigma, 2.0 / 3.0);
+            rc = 1.0 / meniscusCurvature;
+
+            del0 = 1.34 * rc * Foam::pow(mul * Rbdot / sigma, 2.0 / 3.0);
+
+            std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
+        }
 
         delM = Foam::min(0.3 * rc, 20 * del0);
-
-        std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
-
 
         // Initialize PETSC vectors
         VecCreateSeq(PETSC_COMM_SELF, n, &s);

@@ -6,7 +6,10 @@
 
     microlayerContext.dt = runTime.deltaT().value();
 
-    microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", 0);
+    if (mag(microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", 0) * microlayerContext.dt) < microlayerContext.ds)
+    {
+        microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", 0);
+    }
 
     microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
 
@@ -106,7 +109,8 @@
 
             if (sNewp[j] >= sOldp[nOld - 1])
             {
-                hNewp[j] = 3 * hNewp[j - 1] - 3 * hNewp[j - 2] + hNewp[j - 3];
+                //hNewp[j] = 3 * hNewp[j - 1] - 3 * hNewp[j - 2] + hNewp[j - 3];
+                hNewp[j] = microlayerContext.delM; // Matching thickness at end of microlayer
             }
         }
 
@@ -198,7 +202,5 @@
         PetscCall(VecDestroy(&r));
         PetscCall(MatDestroy(&J));
         PetscCall(SNESDestroy(&snes));
-
-        
     }
 }

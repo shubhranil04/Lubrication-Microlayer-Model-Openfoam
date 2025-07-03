@@ -198,7 +198,7 @@
         Info << "Meniscus slope = " << meniscusSlope << nl << "" << nl;
     }
 
-    microlayerDict.set("meniscusSlope", meniscusCurvature);
+    microlayerDict.set("meniscusSlope", meniscusSlope);
     microlayerDict.set("meniscusCurvature", meniscusCurvature);
     microlayerDict.set("bubbleFootRadiusOfCurvature", 1.0 / meniscusCurvature);
     microlayerDict.set("initialMicrolayerThickness", initialMicrolayerThickness);
