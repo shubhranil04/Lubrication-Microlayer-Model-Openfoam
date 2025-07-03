@@ -214,28 +214,28 @@ PetscErrorCode computeHeatFlux(void *ctx_)
     PetscScalar Tw = ctx->Tw; // Wall temperature
 
     // Current State
-    Vec h = ctx->h; // Current interface profile
+    Vec h_ = ctx->h; // Current interface profile
 
-    VecDuplicate(h, &ctx->q);
+    VecDuplicate(h_, &ctx->q);
 
-    Vec q = ctx->q; // Heat flux vector
+    Vec q_ = ctx->q; // Heat flux vector
 
     // Get access to the array data
     const PetscScalar *hp;
     PetscScalar *qp;
     PetscInt n;
 
-    PetscCall(VecGetSize(h, &n));
-    PetscCall(VecGetArrayRead(h, &hp));
-    PetscCall(VecGetArray(q, &qp));
+    PetscCall(VecGetSize(h_, &n));
+    PetscCall(VecGetArrayRead(h_, &hp));
+    PetscCall(VecGetArray(q_, &qp));
 
     for (PetscInt i = 0; i < n; ++i)
     {
         qp[i] = (Tw - Tsat) / (Ri + hp[i] / kappal);
     }
 
-    VecRestoreArrayRead(h, &hp);
-    VecRestoreArray(q, &qp);
+    VecRestoreArrayRead(h_, &hp);
+    VecRestoreArray(q_, &qp);
 
     return PETSC_SUCCESS;
 }
@@ -280,7 +280,8 @@ PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
             {
                 PetscScalar dx = xp[i] - xMin;
                 PetscScalar avgQ = qp[i];
-                integral += avgQ * dx;
+                PetscScalar avgx = xp[i];
+                integral += avgQ * avgx * dx;
                 length += dx;
                 first = PETSC_FALSE;
             }
@@ -289,15 +290,18 @@ PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
             {
                 PetscScalar dx = xp[i] - xp[i-1];
                 PetscScalar avgQ = (qp[i] + qp[i-1]) / 2.0; // Trapezoidal rule
-                integral += avgQ * dx;
+                PetscScalar avgx = (xp[i] + xp[i-1]) / 2.0; // Midpoint for average
+                integral += 2 * avgQ * avgx * dx; // Integral over circular arc segment
                 length += dx;
             }
             
         }
     }
 
-    PetscCall(VecRestoreArrayRead(q, &qp));
+    PetscScalar denom = xMax * xMax - xMin * xMin;
 
-    return integral / length; // Mean flux
+    PetscCall(VecRestoreArrayRead(q, &qp));
+    PetscCall(VecRestoreArrayRead(x, &xp));
+    return integral / denom; // Mean flux
 }
 // ************************************************************************* //

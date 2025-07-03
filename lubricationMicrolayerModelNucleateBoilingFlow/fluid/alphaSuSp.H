@@ -27,14 +27,14 @@ forAll(dgdt, celli)
     {
         Sp[celli] += dgdt[celli] / max(alpha1[celli], 1e-4);
     }
-    if ((alphaSource[celli] + spreadMicrolayerMassSource[celli]/rho1[celli])> 0.0 && alpha1[celli] > 0.0)
+    if ((alphaSource[celli] + sharpMicrolayerMassSource[celli]/rho1[celli])> 0.0 && alpha1[celli] > 0.0)
     {
         // Sp[celli] -= alphaSource[celli];
-        Su[celli] -= (alphaSource[celli] + spreadMicrolayerMassSource[celli]/rho1[celli]);
+        Su[celli] -= (alphaSource[celli] + sharpMicrolayerMassSource[celli]/rho1[celli]);
     }
     else if ((alphaSource[celli] + spreadMicrolayerMassSource[celli]/rho1[celli]) < 0.0 && alpha1[celli] < 1.0)
     {
-        Su[celli] -= (alphaSource[celli] + spreadMicrolayerMassSource[celli]/rho1[celli]);
+        Su[celli] -= (alphaSource[celli] + sharpMicrolayerMassSource[celli]/rho1[celli]);
     }
 }
 

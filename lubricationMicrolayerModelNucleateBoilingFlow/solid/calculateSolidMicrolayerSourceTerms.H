@@ -47,7 +47,7 @@
 
         PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
 
-        microlayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
+        // microlayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
 
     }
 

@@ -941,6 +941,7 @@ $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/createTimeControls.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/readTimeControls.H \
 readPIMPLEControls.H \
 ./include/setMultiRegionDeltaT.H \
+setMicrolayerDeltaT.H \
 ./fluid/setRegionFluidFields.H \
 ./fluid/setFluidMicrolayerFields.H \
 ./fluid/readFluidMultiRegionPIMPLEControls.H \

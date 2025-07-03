@@ -45,7 +45,9 @@ ls			$ls;
 
 Tw			$Tact;
 
-initialContactLinePosition	0;
+initialContactLinePosition	$initialContactLinePosition;
+
+spread 			$spread;
 
 microregionHeight	$hm;
 
@@ -55,7 +57,9 @@ desiredGridSize		$desiredGridSize;
 
 contactLineVelocity	$contactLineVelocity;
 
-bubbleFootRadiusOfCurvature	$initialBubbleFootRadiusOfCurvature;	
+bubbleFootRadiusOfCurvature	$initialBubbleFootRadiusOfCurvature;
+
+initialMicrolayerThickness 	$initialMicrolayerThickness;	
 
 
 

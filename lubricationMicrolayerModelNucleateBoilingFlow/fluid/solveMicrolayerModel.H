@@ -6,11 +6,11 @@
 
     microlayerContext.dt = runTime.deltaT().value();
 
-    microlayerContext.ub = max(microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", 0), 0);
+    microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", 0);
 
     microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
 
-    microlayerContext.l = microlayerDict.lookupOrDefault<scalar>("bubbleRadius", 0);
+    microlayerContext.l += (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt; //= microlayerDict.lookupOrDefault<scalar>("bubbleRadius", 0);
 
     if (microlayerContext.l < microlayerContext.dsReq)
     {
@@ -22,7 +22,7 @@
 
     microlayerContext.rc = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleFootRadiusOfCurvature", 1e-6);
 
-    microlayerContext.delM = 0.3 * microlayerContext.rc;
+    microlayerContext.delM = min(0.3 * microlayerContext.rc, 20 * microlayerContext.del0);
 
     // Update mesh
 
@@ -31,7 +31,7 @@
 
         Info << "Remeshing ..." << nl;
 
-        microlayerContext.n = max(int(microlayerContext.l / microlayerContext.dsReq) + 1, 11); // Have at least 11 nodes
+        microlayerContext.n = max(int(microlayerContext.l / microlayerContext.dsReq) + 1, microlayerContext.nMin); // Have at least 11 nodes
 
         microlayerContext.ds = microlayerContext.l / (microlayerContext.n - 1);
 
@@ -163,6 +163,9 @@
 
         PetscCall(VecCopy(h, microlayerContext.h));
 
+        // Compute heat flux
+        computeHeatFlux(&microlayerContext);
+
         // Write files
         if (runTime.writeTime())
         {
@@ -183,6 +186,12 @@
             PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, hml_file.c_str(), &petscviewer));
             PetscCall(VecView(microlayerContext.h, petscviewer));
             PetscCall(PetscViewerDestroy(&petscviewer));
+
+            fileName qml_file = writeDir / "qml.csv";
+
+            PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, qml_file.c_str(), &petscviewer));
+            PetscCall(VecView(microlayerContext.q, petscviewer));
+            PetscCall(PetscViewerDestroy(&petscviewer));
         }
 
         PetscCall(VecDestroy(&h));
@@ -190,7 +199,6 @@
         PetscCall(MatDestroy(&J));
         PetscCall(SNESDestroy(&snes));
 
-        // Compute heat flux
-        computeHeatFlux(&microlayerContext);
+        
     }
 }

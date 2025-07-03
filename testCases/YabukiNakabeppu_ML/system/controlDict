@@ -23,7 +23,7 @@ stopAt          endTime; //writeNow; //endTime;
 
 endTime         0.03;
 
-deltaT          1e-8;
+deltaT          1e-9;
 
 writeControl    adjustable;
 
@@ -45,7 +45,7 @@ runTimeModifiable yes;
 
 maxCo           0.1;
 
-maxAlphaCo      0.1;
+maxAlphaCo      0.05;
 
 maxCapillaryNum 1e8;
 

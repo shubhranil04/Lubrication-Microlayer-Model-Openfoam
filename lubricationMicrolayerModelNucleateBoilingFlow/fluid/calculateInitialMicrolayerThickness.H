@@ -200,6 +200,7 @@
 
     microlayerDict.set("meniscusSlope", meniscusCurvature);
     microlayerDict.set("meniscusCurvature", meniscusCurvature);
+    microlayerDict.set("bubbleFootRadiusOfCurvature", 1.0 / meniscusCurvature);
     microlayerDict.set("initialMicrolayerThickness", initialMicrolayerThickness);
 }
 // ************************************************************************* //

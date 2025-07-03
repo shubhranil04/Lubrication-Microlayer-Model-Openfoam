@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
         #include "multiphaseMultiRegionCourantNo.H"
         #include "solidRegionDiffusionNo.H"
         #include "setMultiRegionDeltaT.H"
+        #include "setMicrolayerDeltaT.H"
 
         ++runTime;
 

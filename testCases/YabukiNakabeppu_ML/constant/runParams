@@ -84,9 +84,9 @@ CA	23.0;
 // Microregion properties
 Ri	6.38e-8;
 
-Qmicro	45.83;
+Qmicro	0;
 
-hm	3.69e-7;
+hm	0;
 
 ls	10e-9; // slip length
 
@@ -127,18 +127,28 @@ blThickness	#calc "7.14 * Foam::pow($mul * $kappal / ($rhol * $rhol * $cpl * $be
 
 // Initial Microlayer Length
 
+spread 			5;
+
 // Scriven growth constant
 growthConstant 			32.14;
 
-initialMicrolayerLength 	#calc "$seedRadius * sin($CA * $pi / 180)";
+initialContactLinePosition	0;
+	
+initialMicrolayerLength 	#calc "$seedRadius * sin($CA * $pi / 180) - $initialContactLinePosition";
 
 desiredGridSize			1e-6;
 
-contactLineCapillaryNumber	0.6e-3;
+contactLineCapillaryNumber	1e-3;
 
 contactLineVelocity		#calc "$sigma * $contactLineCapillaryNumber / $mul";
 
 initialBubbleFootRadiusOfCurvature	1.8e-6;
+
+initialMicrolayerThickness	2.2e-07;
+
+minimumGridPoints		#calc "initialMicrolayerLength / 1e-7";
+
+
 
 
 
