@@ -146,7 +146,7 @@ initialBubbleFootRadiusOfCurvature	1.8e-6;
 
 initialMicrolayerThickness	2.2e-07;
 
-minimumGridPoints		#calc "initialMicrolayerLength / 1e-7";
+minimumGridPoints		#calc "$initialMicrolayerLength / 1e-7";
 
 
 
