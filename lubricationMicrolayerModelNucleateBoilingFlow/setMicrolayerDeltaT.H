@@ -6,7 +6,7 @@ forAll(fluidRegions, i)
 
     const scalar currDeltaT = runTime.deltaT().value();
 
-    const scalar microlayerDeltaT = 0.1 * microlayerContext.ds / (mag(microlayerContext.ub) + 1e-10);
+    const scalar microlayerDeltaT = max(1e-9, 0.1 * microlayerContext.ds / (mag(microlayerContext.ub) + 1e-10));
 
     if (microlayerDeltaT < currDeltaT)
     {

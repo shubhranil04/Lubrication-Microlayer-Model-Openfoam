@@ -5,6 +5,7 @@
 #include "volFields.H"
 #include "fvMesh.H"
 #include <boost/math/interpolators/makima.hpp>
+#include <boost/math/interpolators/cardinal_cubic_b_spline.hpp>
 #include <boost/math/tools/roots.hpp>
 
 // Define PETSC Context struct
@@ -122,7 +123,7 @@ struct MicrolayerContext
             std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
         }
 
-        delM = Foam::min(0.3 * rc, 20 * del0);
+        delM = 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
 
         // Initialize PETSC vectors
         VecCreateSeq(PETSC_COMM_SELF, n, &s);
@@ -134,10 +135,68 @@ struct MicrolayerContext
         VecGetArray(x, &xp);
         VecGetArray(h, &hp);
 
-        std::vector<double> xSp = {0, 0.1 * l, 0.2 * l, 0.22 * l, 0.3 * l, 0.4 * l, 0.5 * l, 0.6 * l, 0.7 * l, 0.8 * l, 1.001 * l};
-        std::vector<double> ySp = {0, 1.05 * del0, 0.52 * del0, 0.35 * del0, 0.45 * del0, 0.59 * del0, 0.73 * del0, 0.86 * del0, 0.95 * del0, 1.25 * del0, delM};
+        // std::vector<double> xSp = {0, 0.1 * l, 0.2 * l, 0.22 * l, 0.3 * l, 0.4 * l, 0.5 * l, 0.6 * l, 0.7 * l, 0.8 * l, 1.001 * l};
+        // std::vector<double> ySp = {0, 1.05 * del0, 0.52 * del0, 0.35 * del0, 0.45 * del0, 0.59 * del0, 0.73 * del0, 0.86 * del0, 0.95 * del0, 1.25 * del0, delM};
+        //  auto spline = boost::math::interpolators::makima<std::vector<double>>(std::move(xSp), std::move(ySp));
 
-        auto spline = boost::math::interpolators::makima<std::vector<double>>(std::move(xSp), std::move(ySp));
+        /*
+        std::vector<double> xSp = {0, 0.1*l, 0.2*l, 0.3*l, 0.4*l, 0.5*l, 0.6*l, 0.7*l, 0.8*l, 0.9*l, 1*l, 1.1*l};
+        std::vector<double> ySp = {0, 1.05*del0, 0.52*del0, 0.45*del0, 0.59*del0, 0.73*del0, 0.86*del0, 0.95*del0, 1.25*del0, 5.84*del0, 19.8*del0, 48.21*del0};
+
+        double x0Sp = 0.0;
+        double dxSp = 0.1 * l; // Uniform spacing
+
+        // Construct the spline
+        auto spline = boost::math::interpolators::cardinal_cubic_b_spline<double>(
+            ySp.begin(), ySp.end(), x0Sp, dxSp
+        );
+
+
+        for (PetscInt i = 0; i < n; i++)
+        {
+            sp[i] = i * ds;
+            xp[i] = xCl + i * ds;
+            hp[i] = spline(i * ds); // delM * i * ds / l; // Initial microlayer thickness (wedge shape)
+        }
+
+        thetaApp = std::atan(hp[0] / ds); // Apparent contact angle at the contact line
+        */
+
+        double a = 2 * del0 / Foam::constant::mathematical::pi;
+        double b = Foam::constant::mathematical::pi * std::tan(thetaApp) / (2 * del0);
+        double c = 1.0 / (2 * rc);
+        double d = l - std::sqrt(delM / c);
+
+        int nSp = 21;
+        std::vector<double> xSp(nSp);
+        std::vector<double> ySp(nSp, 0.0);
+
+        double x0Sp = 0.0;
+        double dxSp = l / (nSp - 1); // Uniform spacing
+
+        for (PetscInt i = 0; i < nSp; i++)
+        {
+            xSp[i] = i * dxSp;
+        }
+
+        // Compute ySp based on condition
+        for (int i = 0; i < nSp; ++i)
+        {
+            if (xSp[i] <= d)
+            {
+                ySp[i] = a * std::atan(b * xSp[i]);
+            }
+            else
+            {
+                ySp[i] = c * std::pow((xSp[i] - d), 2) + a * std::atan(b * d);
+            }
+        }
+
+        // Construct the spline
+        auto spline = boost::math::interpolators::cardinal_cubic_b_spline<double>(
+            ySp.begin(), ySp.end(), x0Sp, dxSp
+        );
+
 
         for (PetscInt i = 0; i < n; i++)
         {

@@ -142,11 +142,11 @@ contactLineCapillaryNumber	1e-3;
 
 contactLineVelocity		#calc "$sigma * $contactLineCapillaryNumber / $mul";
 
-initialBubbleFootRadiusOfCurvature	1.8e-6;
+initialBubbleFootRadiusOfCurvature	-1e6; //1.8e-6; // If negative, compute using Scriven solution
 
-initialMicrolayerThickness	2.2e-07;
+initialMicrolayerThickness	-1e6; //2.2e-07;
 
-minimumGridPoints		#calc "$initialMicrolayerLength / 1e-7";
+minimumGridPoints		#calc "int($initialMicrolayerLength / 1e-6)";
 
 
 

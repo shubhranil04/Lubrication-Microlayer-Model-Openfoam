@@ -21,11 +21,11 @@
         microlayerContext.isMl = PETSC_FALSE;
     }
 
-    microlayerContext.del0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialMicrolayerThickness", 1e-6);
+    microlayerContext.del0 = microlayerDict.get<Foam::scalar>("initialMicrolayerThickness");
 
-    microlayerContext.rc = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleFootRadiusOfCurvature", 1e-6);
+    microlayerContext.rc = microlayerDict.get<Foam::scalar>("bubbleFootRadiusOfCurvature");
 
-    microlayerContext.delM = min(0.3 * microlayerContext.rc, 20 * microlayerContext.del0);
+    microlayerContext.delM = 10 * microlayerContext.del0 ;//min(0.3 * microlayerContext.rc, 20 * microlayerContext.del0);
 
     // Update mesh
 

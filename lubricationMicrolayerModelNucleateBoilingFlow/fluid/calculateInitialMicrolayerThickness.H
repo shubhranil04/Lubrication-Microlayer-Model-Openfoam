@@ -135,7 +135,9 @@
 
         const scalar B = microlayerDict.get<scalar>("growthConstant");
 
-        const scalar Rb = microlayerDict.lookupOrDefault<scalar>("bubbleRadius", 0) + 1e-20;
+        // scalar Rb = microlayerDict.lookupOrDefault<scalar>("bubbleRadius", 0) + 1e-20;
+
+        scalar Rb = microlayerContext.xCl + microlayerContext.l;
 
         scalar Rbdot = 2 * B * B * alphaLiquid / Rb;
 
