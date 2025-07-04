@@ -13,15 +13,17 @@
 struct MicrolayerContext
 {
     PetscBool isMl; // Flag to indicate if microlayer is present
+
+    PetscScalar r0, umax = 100; // Initial bubble radius, maximum bubble velocity
     // contactline position, microlayer length, desired grid size, actual grid size time step
-    PetscScalar xCl, l, dsReq, ds, dt;
+    PetscScalar xCl, l, dsReq, ds, dt, dtMax;
     PetscInt n, nMin; // number of grid points
     Vec s, x, h, q;   // grid in contactline frame, grid in global frame, microlayer thickness, heat flux
 
-    PetscScalar ub, ucl, thetaApp, delm, del0, rc, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
+    PetscScalar ub, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
 
     // Fluid properties
-    PetscScalar rhol, mul, kappal, Tsat, sigma, hfg, Ri, ls, cpl; // density, viscosity, thermal conductivity, saturation temperature, surface tension, latent heat of vaporization, and interface thermal resistance
+    PetscScalar rhol, mul, kappal, Tsat, sigma, hfg, Ri, ls, cpl, alphal; // density, viscosity, thermal conductivity, saturation temperature, surface tension, latent heat of vaporization, and interface thermal resistance
     // Constructor
 
     // Wall temperature (assumed constant for now)
@@ -41,8 +43,12 @@ struct MicrolayerContext
         cpl = microlayerDict.get<Foam::scalar>("cpl");
         Tw = microlayerDict.get<Foam::scalar>("Tw");
 
+        alphal = kappal / (rhol * cpl); // Thermal diffusivity of liquid
+
         // Initialize PETSC context with microlayer properties
+        r0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialBubbleRadius", 10e-6); // Initial bubble radius
         xCl = microlayerDict.lookupOrDefault<Foam::scalar>("initialContactLinePosition", 0.0);
+        dtMax = microlayerDict.lookupOrDefault<Foam::scalar>("maximumTimeStep", 1e-8); // Maximum time step
         l = microlayerDict.get<Foam::scalar>("microlayerLength");
         if (l > 0)
         {
@@ -59,10 +65,11 @@ struct MicrolayerContext
 
         ucl = microlayerDict.get<Foam::scalar>("contactLineVelocity");
         thetaApp = microlayerDict.get<Foam::scalar>("thetaApp");
-        delm = microlayerDict.lookupOrDefault<Foam::scalar>("microregionHeight", 1e-7);
+        delm = microlayerDict.lookupOrDefault<Foam::scalar>("microregionHeight", 0);
 
         del0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialMicrolayerThickness", -1e6);
         rc = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleFootRadiusOfCurvature", -1e6);
+        curv = 1 / rc;
 
         if (del0 < 0 || rc < 0)
         {
@@ -73,6 +80,10 @@ struct MicrolayerContext
             const Foam::scalar alphal = kappal / (rhol * cpl);
 
             const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
+
+            umax = 10 * 2 * B * B * alphal / r0; // Maximum bubble velocity
+
+            ub = 2 * B * B * alphal / r0 * Foam::sin(thetaApp); // Set bubble expansion velocity
 
             const Foam::scalar Rb = xCl + l;
 
@@ -114,16 +125,16 @@ struct MicrolayerContext
 
             const Foam::scalar xbar = root;
 
-            const Foam::scalar meniscusCurvature = 3 * a3 * pow(xbar, 2) + 2 * a2 * xbar + a1;
+            curv = 3 * a3 * pow(xbar, 2) + 2 * a2 * xbar + a1;
 
-            rc = 1.0 / meniscusCurvature;
+            rc = 1.0 / curv;
 
             del0 = 1.34 * rc * Foam::pow(mul * Rbdot / sigma, 2.0 / 3.0);
 
             std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
         }
 
-        delM = 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
+        delM = del0; //0.3 * rc; // 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
 
         // Initialize PETSC vectors
         VecCreateSeq(PETSC_COMM_SELF, n, &s);
@@ -139,9 +150,11 @@ struct MicrolayerContext
         // std::vector<double> ySp = {0, 1.05 * del0, 0.52 * del0, 0.35 * del0, 0.45 * del0, 0.59 * del0, 0.73 * del0, 0.86 * del0, 0.95 * del0, 1.25 * del0, delM};
         //  auto spline = boost::math::interpolators::makima<std::vector<double>>(std::move(xSp), std::move(ySp));
 
+        // Based on dewetting cfd
         /*
         std::vector<double> xSp = {0, 0.1*l, 0.2*l, 0.3*l, 0.4*l, 0.5*l, 0.6*l, 0.7*l, 0.8*l, 0.9*l, 1*l, 1.1*l};
-        std::vector<double> ySp = {0, 1.05*del0, 0.52*del0, 0.45*del0, 0.59*del0, 0.73*del0, 0.86*del0, 0.95*del0, 1.25*del0, 5.84*del0, 19.8*del0, 48.21*del0};
+        //std::vector<double> ySp = {0, 1.05*del0, 0.52*del0, 0.45*del0, 0.59*del0, 0.73*del0, 0.86*del0, 0.95*del0, 1.25*del0, 5.84*del0, 19.8*del0, 48.21*del0};
+        std::vector<double> ySp = {0, 0.5*delM, 0.25*delM, 0.2*delM, 0.23*delM, 0.26*delM, 0.29*delM, 0.32*delM, 0.35*delM, 0.5*delM, delM, 1.25*delM};
 
         double x0Sp = 0.0;
         double dxSp = 0.1 * l; // Uniform spacing
@@ -158,13 +171,13 @@ struct MicrolayerContext
             xp[i] = xCl + i * ds;
             hp[i] = spline(i * ds); // delM * i * ds / l; // Initial microlayer thickness (wedge shape)
         }
-
-        thetaApp = std::atan(hp[0] / ds); // Apparent contact angle at the contact line
         */
 
+        // Analytical
+        /*
         double a = 2 * del0 / Foam::constant::mathematical::pi;
         double b = Foam::constant::mathematical::pi * std::tan(thetaApp) / (2 * del0);
-        double c = 1.0 / (2 * rc);
+        double c = 0.5 * curv;
         double d = l - std::sqrt(delM / c);
 
         int nSp = 21;
@@ -204,10 +217,64 @@ struct MicrolayerContext
             xp[i] = xCl + i * ds;
             hp[i] = spline(i * ds); // delM * i * ds / l; // Initial microlayer thickness (wedge shape)
         }
+        */
+
+        // taninv
+
+        struct CoeffFunction
+        {
+            Foam::scalar theta_, delta_, lml_;
+
+            std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
+            {
+                Foam::scalar A = Foam::tan(theta_) / delta_;
+                Foam::scalar u = Foam::atan(x * lml_);
+                Foam::scalar du_dx = lml_ / (1 + Foam::pow(x * lml_, 2));
+
+                Foam::scalar fx = A * u / x - 1;
+                Foam::scalar dfx = A * (x * du_dx - u) / (x * x);
+                return std::make_pair(fx, dfx);
+            }
+        };
+
+        CoeffFunction f{thetaApp, del0, l};
+
+        const Foam::scalar guess = 1e6;
+        const Foam::scalar min = 0;
+        const Foam::scalar max = 1e10;
+        const int digits = std::numeric_limits<Foam::scalar>::digits;
+
+        Foam::scalar b = boost::math::tools::newton_raphson_iterate(
+            f, guess, min, max, digits);
+
+        Foam::scalar a = Foam::tan(thetaApp) / b;
+
+        for (PetscInt i = 0; i < n; i++)
+        {
+            sp[i] = i * ds;
+            xp[i] = xCl + i * ds;
+            
+            hp[i] = a * Foam::atan(b * i * ds);
+        }
 
         VecRestoreArray(s, &sp);
         VecRestoreArray(x, &xp);
         VecRestoreArray(h, &hp);
+
+        // Write initial conditions
+        PetscViewer viewer;
+
+        Foam::fileName xml_file = "x0.csv";
+
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, xml_file.c_str(), &viewer);
+        VecView(x, viewer);
+        PetscViewerDestroy(&viewer);
+
+        Foam::fileName hml_file = "h0.csv";
+
+        PetscViewerASCIIOpen(PETSC_COMM_WORLD, hml_file.c_str(), &viewer);
+        VecView(h, viewer);
+        PetscViewerDestroy(&viewer);
     }
 };
 

@@ -136,7 +136,7 @@ initialContactLinePosition	0;
 	
 initialMicrolayerLength 	#calc "$seedRadius * sin($CA * $pi / 180) - $initialContactLinePosition";
 
-desiredGridSize			1e-6;
+desiredGridSize			1e-7;
 
 contactLineCapillaryNumber	1e-3;
 
@@ -146,7 +146,9 @@ initialBubbleFootRadiusOfCurvature	-1e6; //1.8e-6; // If negative, compute using
 
 initialMicrolayerThickness	-1e6; //2.2e-07;
 
-minimumGridPoints		#calc "int($initialMicrolayerLength / 1e-6)";
+minimumGridPoints		#calc "int($initialMicrolayerLength / 1e-7)";
+
+maximumTimeStep			1e-8;
 
 
 

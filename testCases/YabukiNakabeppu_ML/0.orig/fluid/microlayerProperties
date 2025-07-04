@@ -26,7 +26,7 @@ FoamFile
 
 initialMicrolayerThicknessModel landauLevichScriven;
 
-growthConstant		32.14;
+growthConstant		$growthConstant;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -45,7 +45,11 @@ ls			$ls;
 
 Tw			$Tact;
 
+initialBubbleRadius	$seedRadius;
+
 initialContactLinePosition	$initialContactLinePosition;
+
+maximumTimeStep 		$maximumTimeStep;
 
 spread 			$spread;
 

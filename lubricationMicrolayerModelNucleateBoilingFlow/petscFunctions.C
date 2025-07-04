@@ -30,7 +30,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     PetscScalar ls = ctx->ls;          // Slip length
     PetscScalar ucl = ctx->ucl;        // Contact line speed
     PetscScalar theta = ctx->thetaApp; // Apparent contact angle
-
+    PetscScalar curv = ctx->curv;      // Meniscus curvature
     // Current State
     Vec hn = ctx->h; // Current interface profile
 
@@ -42,14 +42,28 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     // Compute function
 
     // Boundary conditions at Contact Line
+    /*
     fp[0] = hp[0] - delm;                             // microlayer height = microregion height
     fp[1] = hp[1] - hp[0] - ds * tan(theta);          // apparent contact angle condition
     fp[2] = (-hp[0] + 3 * hp[1] - 3 * hp[2] + hp[3]); // dp/ds = 0 at contact line
+    */
+
+    // Higher order boundary conditions at contact line
+    fp[0] = hp[0] - delm;                                         // microlayer height = microregion height
+    fp[1] = -1.5 * hp[0] + 2 * hp[1] - 0.5 * hp[2] - ds * tan(theta); // apparent contact angle condition
+    fp[2] = -2.5 * hp[0] + 9 * hp[1] - 12 * hp[2] + 7 * hp[3] - 1.5 * hp[4]; // dp/ds = 0 at contact line
 
     // Boundary conditions at Bubble foot
+    /*
     fp[n - 1] = hp[n - 1] - delM;                                         // microlayer height = matching thickness at end of microlayer
-    fp[n - 2] = (hp[n - 1] - 2 * hp[n - 2] + hp[n - 3]) - (ds * ds) / rc; // curvature condition at bubble foot
+    fp[n - 2] = (hp[n - 1] - 2 * hp[n - 2] + hp[n - 3]) - (ds * ds) * curv; // curvature condition at bubble foot
     fp[n - 3] = (hp[n - 1] - 3 * hp[n - 2] + 3 * hp[n - 3] - hp[n - 4]);  // dp/ds = 0 at bubble foot
+    */
+
+    // Higher order boundary conditions at bubble foot
+    fp[n - 1] = hp[n - 1] - delM; // microlayer height = matching thickness at end of microlayer
+    fp[n - 2] = 2 * hp[n - 1] - 5 * hp[n - 2] + 4 * hp[n - 3] - hp[n - 4] - ds * ds * curv; // curvature condition at bubble foot
+    fp[n - 3] = 2.5 * hp[n - 1] - 9 * hp[n - 2] + 12 * hp[n - 3] - 7 * hp[n - 4] + 1.5 * hp[n - 5]; // dp/ds = 0 at bubble foot
 
     // Interior points
     for (i = 3; i < n - 3; i++)
@@ -131,6 +145,8 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     }
 
     // Boundary Conditions at Contact Line
+
+    /*
     i = 0;
     A[0] = 1.0;
 
@@ -157,8 +173,43 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     A[3] = 1.0;
 
     PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
+    */
+
+    // Higher order boundary conditions at contact line
+    i = 0;
+    A[0] = 1.0;
+
+    PetscCall(MatSetValues(B, 1, &i, 1, &i, A, INSERT_VALUES));
+
+    i = 1;
+    j[0] = 0;
+    j[1] = 1;
+    j[2] = 2;
+
+    A[0] = -3.0 / 2.0;
+    A[1] = 2.0;
+    A[2] = -1.0 / 2.0;
+
+    PetscCall(MatSetValues(B, 1, &i, 3, j, A, INSERT_VALUES));
+
+    i = 2;
+    j[0] = 0;
+    j[1] = 1;
+    j[2] = 2;
+    j[3] = 3;
+    j[4] = 4;
+
+    A[0] = -5.0 / 2.0;
+    A[1] = 9.0;
+    A[2] = -12.0;
+    A[3] = 7.0;
+    A[4] = -3.0 / 2.0;
+
+    PetscCall(MatSetValues(B, 1, &i, 5, j, A, INSERT_VALUES));
+
 
     // Boundary Conditions at Bubble Foot
+    /*
     i = n - 1;
     A[0] = 1.0;
 
@@ -187,6 +238,41 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     A[3] = 1.0;
 
     PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
+    */
+
+    // Higher order boundary conditions at bubble foot
+    i = n - 1;
+    A[0] = 1.0;
+
+    PetscCall(MatSetValues(B, 1, &i, 1, &i, A, INSERT_VALUES));
+
+    i = n - 2;
+    j[0] = n - 4;
+    j[1] = n - 3;
+    j[2] = n - 2;
+    j[3] = n - 1;
+
+    A[0] = -1.0;
+    A[1] = 4.0;
+    A[2] = -5.0;
+    A[3] = 2.0;
+
+    PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
+
+    i = n - 3;
+    j[0] = n - 5;
+    j[1] = n - 4;
+    j[2] = n - 3;
+    j[3] = n - 2;
+    j[4] = n - 1;
+
+    A[0] = 3.0 / 2.0;
+    A[1] = -7.0;
+    A[2] = 12.0;
+    A[3] = -9.0;
+    A[4] = 5.0 / 2.0;
+
+    PetscCall(MatSetValues(B, 1, &i, 5, j, A, INSERT_VALUES));
 
     // Restore vectors
     PetscCall(VecRestoreArrayRead(h, &hp));

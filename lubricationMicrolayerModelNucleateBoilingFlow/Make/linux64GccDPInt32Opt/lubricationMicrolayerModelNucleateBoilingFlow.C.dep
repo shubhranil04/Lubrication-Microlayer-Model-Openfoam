@@ -941,7 +941,6 @@ $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/createTimeControls.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/readTimeControls.H \
 readPIMPLEControls.H \
 ./include/setMultiRegionDeltaT.H \
-setMicrolayerDeltaT.H \
 ./fluid/setRegionFluidFields.H \
 ./fluid/setFluidMicrolayerFields.H \
 ./fluid/readFluidMultiRegionPIMPLEControls.H \
@@ -952,7 +951,6 @@ setMicrolayerDeltaT.H \
 ./fluid/alphaEqn.H \
 ./fluid/alphaSuSp.H \
 ./fluid/findBubbleRadius.H \
-./fluid/calculateInitialMicrolayerThickness.H \
 ./fluid/solveMicrolayerModel.H \
 ./fluid/calculateMicrolayerSourceTerms.H \
 ./fluid/YEqns.H \

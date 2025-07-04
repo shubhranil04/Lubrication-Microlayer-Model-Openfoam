@@ -27,7 +27,7 @@ deltaT          1e-9;
 
 writeControl    adjustable;
 
-writeInterval   1e-6;
+writeInterval   1e-4;
 
 purgeWrite      0;
 
@@ -45,7 +45,7 @@ runTimeModifiable yes;
 
 maxCo           0.1;
 
-maxAlphaCo      0.05;
+maxAlphaCo      0.1;
 
 maxCapillaryNum 1e8;
 

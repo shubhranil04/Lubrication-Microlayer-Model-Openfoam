@@ -12,4 +12,6 @@ rm -rf dynamicCode
 
 rm -rf VTK
 
+rm -rf *.csv
 
+rm -rf log.*
