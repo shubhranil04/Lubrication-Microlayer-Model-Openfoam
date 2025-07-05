@@ -22,7 +22,7 @@ if(overwrite)
              : fvm::laplacian(betav*taniAlpha(), h, "laplacian(alpha,h)")
             )
           ==
-            fvOptions(rho, h) + microlayerHeatSource
+            fvOptions(rho, h) + spreadMicrolayerHeatSource
 
         );
 

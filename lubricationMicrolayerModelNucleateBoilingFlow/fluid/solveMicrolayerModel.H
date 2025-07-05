@@ -9,18 +9,6 @@
         microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub);
     }
 
-    //microlayerContext.del0 = microlayerDict.get<Foam::scalar>("initialMicrolayerThickness");
-
-    //microlayerContext.rc = microlayerDict.get<Foam::scalar>("bubbleFootRadiusOfCurvature");
-
-    //microlayerContext.delM = 10 * microlayerContext.del0; // min(0.3 * microlayerContext.rc, 20 * microlayerContext.del0);
-
-    // microlayerContext.dt = runTime.deltaT().value();
-
-    // microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
-
-    // microlayerContext.l += (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt; //= microlayerDict.lookupOrDefault<scalar>("bubbleRadius", 0);
-
     // Divide foam time step into microlayer time step
 
     scalar dtFoam = runTime.deltaTValue();
@@ -38,13 +26,6 @@
 
     for (label nt = 0; nt < n_time_steps; ++nt)
     {   
-        //const scalar B = microlayerDict.get<scalar>("growthConstant");
-
-        //scalar Rb = microlayerContext.xCl + microlayerContext.l;
-
-        //scalar Rbdot = 2 * B * B * microlayerContext.alphal / Rb;
-
-        //microlayerContext.ub = 2 * B * B * microlayerContext.alphal / Rb * Foam::sin(microlayerContext.thetaApp);
 
         microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
         microlayerContext.l += (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt;
@@ -60,9 +41,7 @@
         {
             // Compute initial microlayer thickness
 
-            const word initialMicrolayerThicknessModel = microlayerDict.lookupOrDefault<word>("initialMicrolayerThicknessModel", "linear");
-
-            if (initialMicrolayerThicknessModel == "linear")
+            if (microlayerContext.initialMicrolayerThicknessModel == "linear")
             {
                 Info << "Using linear initial microlayer thickness model" << nl;
 
@@ -75,20 +54,21 @@
                 Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl << "" << nl;
 
                 // Calculate meniscus curvature based on the initial microlayer thickness
-                microlayerContext.rc = microlayerContext.del0 / (1.34 * Foam::pow(microlayerContext.mul * microlayerContext.ub / microlayerContext.sigma, 2.0 / 3.0));
-
+                if (microlayerContext.ub > 0)
+                {
+                    microlayerContext.rc = microlayerContext.del0 / (1.34 * Foam::pow(microlayerContext.mul * microlayerContext.ub / microlayerContext.sigma, 2.0 / 3.0));
+                }
+                
                 microlayerContext.curv = 1.0 / microlayerContext.rc;
 
-                microlayerContext.delM = 0.3 * microlayerContext.rc; //10 * microlayerContext.del0;
+                microlayerContext.delM = microlayerContext.del0; //10 * microlayerContext.del0;
             }
 
-            else if (initialMicrolayerThicknessModel == "landauLevichScriven")
+            else if (microlayerContext.initialMicrolayerThicknessModel == "landauLevichScriven")
             {
                 Info << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution" << nl;
 
                 const scalar B = microlayerDict.get<scalar>("growthConstant");
-
-                // scalar Rb = microlayerDict.lookupOrDefault<scalar>("bubbleRadius", 0) + 1e-20;
 
                 scalar Rb = microlayerContext.xCl + microlayerContext.l;
 
@@ -130,8 +110,6 @@
 
                 const scalar xbar = root;
 
-                //const scalar temp = a3 * Foam::pow(Rb, 3) + a2 * Foam::pow(Rb, 2) + a1 * Rb + a0;
-
                 microlayerContext.curv = 3 * a3 * Foam::pow(xbar, 2) + 2 * a2 * xbar + a1;
 
                 microlayerContext.rc = 1.0 / microlayerContext.curv;
@@ -142,6 +120,36 @@
 
                 Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
 
+            }
+
+            else if (microlayerContext.initialMicrolayerThicknessModel == "powerLaw")
+            {
+                Info << "Using power law initial microlayer thickness model" << nl;
+
+                const scalar coeff = microlayerDict.get<scalar>("coeff");
+
+                const scalar pow = microlayerDict.get<scalar>("pow");
+
+                microlayerContext.del0 = coeff * Foam::pow(microlayerContext.xCl + microlayerContext.l, pow);
+
+                Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
+
+                // Calculate meniscus curvature based on the initial microlayer thickness
+
+                if (microlayerContext.ub > 0)
+                {
+                    microlayerContext.rc = microlayerContext.del0 / (1.34 * Foam::pow(microlayerContext.mul * microlayerContext.ub / microlayerContext.sigma, 2.0 / 3.0));
+                }
+    
+                microlayerContext.curv = 1.0 / microlayerContext.rc;
+                microlayerContext.delM =  microlayerContext.del0; 
+            }
+
+            else
+            {
+                FatalErrorInFunction
+                    << "Unknown initialMicrolayerThicknessModel: " << microlayerContext.initialMicrolayerThicknessModel
+                    << abort(FatalError);
             }
 
             microlayerDict.set("meniscusCurvature", microlayerContext.curv);
@@ -225,7 +233,6 @@
 
                 if (j == microlayerContext.n - 1)
                 {
-                    // hNewp[j] = 2 * hNewp[j - 1] - 5 * hNewp[j - 2] + 4 * hNewp[j - 3] - hNewp[j - 4] - microlayerContext.ds * microlayerContext.ds * microlayerContext.curv;
                     hNewp[j] = microlayerContext.delM; // Matching thickness at end of microlayer
                 }
                 

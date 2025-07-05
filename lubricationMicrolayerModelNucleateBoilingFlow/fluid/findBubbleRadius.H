@@ -77,7 +77,7 @@
 
         if (numContactLineCells > 0)
         {
-            isBubble = true;
+            isBubbleAttached = true;
 
             bubbleRadius /= numContactLineCells;
 
@@ -85,7 +85,8 @@
 
             scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01 + 1e-20);
 
-            scalar bubbleExpansionAcceleration = 2 / ((dt01 + 1e-20) * (dt12 + 1e-20) * (dt01 + dt12 + 1e-20)) * (bubbleRadius * dt12 * dt12 - bubbleRadius1 * (dt01 + dt12) * (dt01 + dt12) + bubbleRadius2 * dt01 * dt01);
+            scalar bubbleExpansionAcceleration = 2 * bubbleRadius / ((dt01 + 1e-20) * (dt01 + dt12 + 1e-20)) 
+        - 2 * bubbleRadius1 / ((dt01 + 1e-20) * (dt12 + 1e-20)) + 2 * bubbleRadius2 / ((dt12 + 1e-20) * (dt01 + dt12 + 1e-20));
 
             Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
             Info << "Bubble foot expansion velocity = " << bubbleExpansionVelocity << " m/s" << nl;
@@ -102,7 +103,9 @@
             dt12 = dt01;
         }
         else
-        {
+        {   
+            isBubbleAttached = false;
+
             Info << "No contact line cells found" << nl << "" << nl;
         }
     }

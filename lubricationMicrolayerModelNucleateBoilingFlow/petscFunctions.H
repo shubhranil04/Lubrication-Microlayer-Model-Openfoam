@@ -14,13 +14,13 @@ struct MicrolayerContext
 {
     PetscBool isMl; // Flag to indicate if microlayer is present
 
-    PetscScalar r0, umax = 100; // Initial bubble radius, maximum bubble velocity
+    PetscScalar r0, umax = 1e3; // Initial bubble radius, maximum bubble velocity
     // contactline position, microlayer length, desired grid size, actual grid size time step
     PetscScalar xCl, l, dsReq, ds, dt, dtMax;
     PetscInt n, nMin; // number of grid points
     Vec s, x, h, q;   // grid in contactline frame, grid in global frame, microlayer thickness, heat flux
 
-    PetscScalar ub, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
+    PetscScalar ub = 0, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
 
     // Fluid properties
     PetscScalar rhol, mul, kappal, Tsat, sigma, hfg, Ri, ls, cpl, alphal; // density, viscosity, thermal conductivity, saturation temperature, surface tension, latent heat of vaporization, and interface thermal resistance
@@ -28,6 +28,8 @@ struct MicrolayerContext
 
     // Wall temperature (assumed constant for now)
     PetscScalar Tw;
+
+    Foam::word initialMicrolayerThicknessModel; // Model for initial microlayer thickness
 
     MicrolayerContext(Foam::IOdictionary &microlayerDict)
     {
@@ -44,6 +46,9 @@ struct MicrolayerContext
         Tw = microlayerDict.get<Foam::scalar>("Tw");
 
         alphal = kappal / (rhol * cpl); // Thermal diffusivity of liquid
+
+        // Read initial microlayer thickness model
+        initialMicrolayerThicknessModel = microlayerDict.lookupOrDefault<Foam::word>("initialMicrolayerThicknessModel", "linear");
 
         // Initialize PETSC context with microlayer properties
         r0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialBubbleRadius", 10e-6); // Initial bubble radius
@@ -64,26 +69,20 @@ struct MicrolayerContext
         ub = 0.0; // will be set during iteration
 
         ucl = microlayerDict.get<Foam::scalar>("contactLineVelocity");
-        thetaApp = microlayerDict.get<Foam::scalar>("thetaApp");
-        delm = microlayerDict.lookupOrDefault<Foam::scalar>("microregionHeight", 0);
+        thetaApp = microlayerDict.get<Foam::scalar>("thetaApp")* Foam::constant::mathematical::pi / 180.0; // Convert to radians
+        delm = 0; // microlayerDict.lookupOrDefault<Foam::scalar>("microregionHeight", 0);
 
-        del0 = microlayerDict.lookupOrDefault<Foam::scalar>("initialMicrolayerThickness", -1e6);
-        rc = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleFootRadiusOfCurvature", -1e6);
-        curv = 1 / rc;
+        const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
 
-        if (del0 < 0 || rc < 0)
+        // umax = 10 * 2 * B * B * alphal / r0; // Maximum bubble velocity
+
+        ub = 2 * B * B * alphal / r0 * Foam::sin(thetaApp); // Set bubble expansion velocity
+
+        if (initialMicrolayerThicknessModel == "landauLevichScriven" || initialMicrolayerThicknessModel == "landauLevich")
         {
             // If initial microlayer thickness or bubble foot radius of curvature is not set, calculate them
 
             std::cout << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution for initial condition" << std::endl;
-
-            const Foam::scalar alphal = kappal / (rhol * cpl);
-
-            const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
-
-            umax = 10 * 2 * B * B * alphal / r0; // Maximum bubble velocity
-
-            ub = 2 * B * B * alphal / r0 * Foam::sin(thetaApp); // Set bubble expansion velocity
 
             const Foam::scalar Rb = xCl + l;
 
@@ -134,7 +133,43 @@ struct MicrolayerContext
             std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
         }
 
-        delM = del0; //0.3 * rc; // 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
+        else if (initialMicrolayerThicknessModel == "linear")
+        {
+            std::cout << "Using linear initial microlayer thickness model" << std::endl;
+
+            const Foam::scalar cSlope = microlayerDict.lookupOrDefault<Foam::scalar>("cSlope", 4.46e-3); // Default value from Utaka et al. 2013
+
+            del0 = cSlope * (xCl + l); // Linear model for initial microlayer thickness
+
+            rc = 1e18;
+
+            curv = 0;
+        }
+
+        else if (initialMicrolayerThicknessModel == "powerLaw")
+        {
+            std::cout << "Using power law initial microlayer thickness model" << std::endl;
+
+            const Foam::scalar coeff = microlayerDict.get<Foam::scalar>("coeff");
+            const Foam::scalar pow = microlayerDict.get<Foam::scalar>("pow");
+
+            del0 = coeff * Foam::pow(xCl + l, pow);
+
+            std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
+
+            rc = 1e18;
+
+            curv = 0;
+        }
+
+        else
+        {
+            std::cerr << "Fatal error in function: Unknown initialMicrolayerThicknessModel: "
+                      << initialMicrolayerThicknessModel << std::endl;
+            std::abort();
+        }
+
+        delM = del0; // 0.3 * rc; // 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
 
         // Initialize PETSC vectors
         VecCreateSeq(PETSC_COMM_SELF, n, &s);
@@ -253,7 +288,7 @@ struct MicrolayerContext
         {
             sp[i] = i * ds;
             xp[i] = xCl + i * ds;
-            
+
             hp[i] = a * Foam::atan(b * i * ds);
         }
 

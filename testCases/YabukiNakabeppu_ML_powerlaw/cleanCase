@@ -1,0 +1,17 @@
+#!/bin/sh
+
+rm -rf 0
+
+rm -rf constant/polyMesh
+
+rm -rf constant/fluid/polyMesh
+
+rm -rf constant/solid/polyMesh
+
+rm -rf dynamicCode
+
+rm -rf VTK
+
+rm -rf *.csv
+
+rm -rf log.*

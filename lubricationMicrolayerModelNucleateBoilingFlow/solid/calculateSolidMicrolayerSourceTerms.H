@@ -1,7 +1,7 @@
 // Get boundary grid points
 
 {
-    Info << "Calculating microlayer source terms ... " << nl;
+    Info << "Calculating solid region microlayer source terms ... " << nl;
 
     const label patchIndex = mesh.boundaryMesh().findPatchID("solid_to_fluid");
     const fvPatch &patch = mesh.boundary()[patchIndex];
@@ -47,9 +47,28 @@
 
         PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
 
-        // microlayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
+        sharpMicrolayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
 
     }
 
     delete[] boundaryPoints;
+
+    scalar spread_ = microlayerDict.lookupOrDefault<scalar>("spreadSolid", 3);
+
+    dimensionedScalar DPsi
+    (
+        "DPsi",
+        dimensionSet(0,2,0,0,0,0,0),
+        spread_/sqr(gAverage(mesh.nonOrthDeltaCoeffs())
+    ));
+
+    //- Smearing of source term field
+    fvScalarMatrix psiEqn
+    (
+        fvm::Sp(scalar(1),spreadMicrolayerHeatSource) - fvm::laplacian(DPsi,spreadMicrolayerHeatSource) == sharpMicrolayerHeatSource
+    );
+
+    psiEqn.solve();
+
+
 }
