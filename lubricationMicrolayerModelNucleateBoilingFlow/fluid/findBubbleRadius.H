@@ -72,7 +72,7 @@
             if (hasContactLine)
             {
                 isCL = true;
-                bubbleRadius = pInternalCentres[faceI].x();
+                bubbleRadius = pInterfaceCentres[faceI].x();
                 break;
             }
         }
