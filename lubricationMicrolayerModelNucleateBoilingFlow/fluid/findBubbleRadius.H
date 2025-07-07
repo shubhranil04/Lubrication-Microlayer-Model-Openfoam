@@ -20,6 +20,8 @@
     const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
     const fvPatch &patch = mesh.boundary()[patchIndex];
 
+    bool isCL = false;
+
     if (hasNormals && hasCentres)
     {
         // Info << "Interpolating the PLIC" << nl;
@@ -38,7 +40,6 @@
         const auto &pInternalCentres = pInternalCentresTmp.cref();
         const auto &pInternalNormals = pInternalNormalsTmp.cref();
 
-        scalar numContactLineCells = 0.0;
         scalar bubbleRadius = 0.0;
 
         forAll(pInternalCentres, faceI)
@@ -70,16 +71,15 @@
 
             if (hasContactLine)
             {
-                numContactLineCells += 1;
-                bubbleRadius += pInternalCentres[faceI].x();
+                isCL = true;
+                bubbleRadius = pInternalCentres[faceI].x();
+                break;
             }
         }
 
-        if (numContactLineCells > 0)
+        if (isCL)
         {
             isBubbleAttached = true;
-
-            bubbleRadius /= numContactLineCells;
 
             scalar dt01 = runTime.deltaTValue();
 

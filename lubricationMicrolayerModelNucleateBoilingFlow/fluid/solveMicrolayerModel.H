@@ -290,7 +290,7 @@
             //Info << "Solving microlayer model ..." << nl;
             PetscCall(SNESSolve(snes, NULL, h));
             PetscCall(SNESGetIterationNumber(snes, &niter));
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD, "number of SNES iterations = %" PetscInt_FMT "\n\n", niter));
+            //PetscCall(PetscPrintf(PETSC_COMM_WORLD, "number of SNES iterations = %" PetscInt_FMT "\n\n", niter));
 
             PetscCall(VecCopy(h, microlayerContext.h));
 
@@ -302,7 +302,7 @@
     }
 
     Info << "Solved microlayer model ..." << nl;
-    
+
     computeHeatFlux(&microlayerContext);
 
     // Write files
