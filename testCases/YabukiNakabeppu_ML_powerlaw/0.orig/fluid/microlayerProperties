@@ -47,9 +47,9 @@ growthConstant		$growthConstant;
 
 Tw			$Tact;
 
-initialBubbleRadius	$seedRadius;
+bubbleRadius	$seedRadius;
 
-initialContactLinePosition	$initialContactLinePosition;
+contactLinePosition	$initialContactLinePosition;
 
 maximumTimeStep 		$maximumTimeStep;
 

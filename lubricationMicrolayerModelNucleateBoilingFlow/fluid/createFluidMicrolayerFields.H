@@ -83,6 +83,6 @@ forAll(fluidRegions, i)
 
     microlayerContextFluid.set(
         i,
-        new MicrolayerContext(microlayerDictFluid[i]));
+        new MicrolayerContext(microlayerDictFluid[i], runTime));
 }
 // ************************************************************************* //

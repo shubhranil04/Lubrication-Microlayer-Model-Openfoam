@@ -8,7 +8,7 @@
     {
         microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub);
     }
-
+    microlayerDict.set("bubbleExpansionVelocity", microlayerContext.ub);
     // Divide foam time step into microlayer time step
 
     scalar dtFoam = runTime.deltaTValue();
@@ -25,9 +25,10 @@
     Info << "Divided foam time step into " << n_time_steps << " microlayer time steps." << nl;
 
     for (label nt = 0; nt < n_time_steps; ++nt)
-    {   
+    {
 
         microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
+
         microlayerContext.l += (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt;
 
         if (microlayerContext.l < microlayerContext.dsReq)
@@ -35,6 +36,9 @@
             microlayerContext.l = 0;
             microlayerContext.isMl = PETSC_FALSE;
         }
+
+        microlayerDict.set("contactLinePosition", microlayerContext.xCl);
+        microlayerDict.set("microlayerLength", microlayerContext.l);
         // Update mesh
 
         if (microlayerContext.isMl)
@@ -43,30 +47,30 @@
 
             if (microlayerContext.initialMicrolayerThicknessModel == "linear")
             {
-                Info << "Using linear initial microlayer thickness model" << nl;
+                //Info << "Using linear initial microlayer thickness model" << nl;
 
                 const scalar cSlope = microlayerDict.lookupOrDefault<scalar>("cSlope", 4.46e-3); // Default value from Utaka et al. 2013
 
-                Info << "cSlope = " << cSlope << nl;
+                //Info << "cSlope = " << cSlope << nl;
 
                 microlayerContext.del0 = cSlope * (microlayerContext.xCl + microlayerContext.l);
 
-                Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl << "" << nl;
+                //Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl << "" << nl;
 
                 // Calculate meniscus curvature based on the initial microlayer thickness
                 if (microlayerContext.ub > 0)
                 {
                     microlayerContext.rc = microlayerContext.del0 / (1.34 * Foam::pow(microlayerContext.mul * microlayerContext.ub / microlayerContext.sigma, 2.0 / 3.0));
                 }
-                
+
                 microlayerContext.curv = 1.0 / microlayerContext.rc;
 
-                microlayerContext.delM = microlayerContext.del0; //10 * microlayerContext.del0;
+                microlayerContext.delM = microlayerContext.del0; // 10 * microlayerContext.del0;
             }
 
             else if (microlayerContext.initialMicrolayerThicknessModel == "landauLevichScriven")
             {
-                Info << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution" << nl;
+                //Info << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution" << nl;
 
                 const scalar B = microlayerDict.get<scalar>("growthConstant");
 
@@ -116,15 +120,14 @@
 
                 microlayerContext.del0 = 1.34 * microlayerContext.rc * Foam::pow(microlayerContext.mul * Rbdot / microlayerContext.sigma, 2.0 / 3.0);
 
-                microlayerContext.delM = microlayerContext.del0; //0.3*microlayerContext.rc; //10 * microlayerContext.del0;
+                microlayerContext.delM = microlayerContext.del0; // 0.3*microlayerContext.rc; //10 * microlayerContext.del0;
 
-                Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
-
+                //Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
             }
 
             else if (microlayerContext.initialMicrolayerThicknessModel == "powerLaw")
             {
-                Info << "Using power law initial microlayer thickness model" << nl;
+                //Info << "Using power law initial microlayer thickness model" << nl;
 
                 const scalar coeff = microlayerDict.get<scalar>("coeff");
 
@@ -132,7 +135,7 @@
 
                 microlayerContext.del0 = coeff * Foam::pow(microlayerContext.xCl + microlayerContext.l, pow);
 
-                Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
+                //Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
 
                 // Calculate meniscus curvature based on the initial microlayer thickness
 
@@ -140,9 +143,9 @@
                 {
                     microlayerContext.rc = microlayerContext.del0 / (1.34 * Foam::pow(microlayerContext.mul * microlayerContext.ub / microlayerContext.sigma, 2.0 / 3.0));
                 }
-    
+
                 microlayerContext.curv = 1.0 / microlayerContext.rc;
-                microlayerContext.delM =  microlayerContext.del0; 
+                microlayerContext.delM = microlayerContext.del0;
             }
 
             else
@@ -156,7 +159,7 @@
             microlayerDict.set("bubbleFootRadiusOfCurvature", microlayerContext.rc);
             microlayerDict.set("initialMicrolayerThickness", microlayerContext.del0);
 
-            Info << "Remeshing ..." << nl;
+            //Info << "Remeshing ..." << nl;
 
             microlayerContext.n = max(int(microlayerContext.l / microlayerContext.dsReq) + 1, microlayerContext.nMin); // Have at least 11 nodes
 
@@ -207,7 +210,7 @@
 
             // Update microlayer thickness
 
-            Info << "Interpolating microlayer profile onto new mesh ..." << nl;
+            //Info << "Interpolating microlayer profile onto new mesh ..." << nl;
 
             for (PetscInt j = 0; j < microlayerContext.n; j++)
             {
@@ -235,7 +238,6 @@
                 {
                     hNewp[j] = microlayerContext.delM; // Matching thickness at end of microlayer
                 }
-                
             }
 
             // Restore vectors
@@ -285,7 +287,7 @@
             PetscCall(SNESSetFunction(snes, r, FormFunction, &microlayerContext));
             PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, &microlayerContext));
 
-            Info << "Solving microlayer model ..." << nl;
+            //Info << "Solving microlayer model ..." << nl;
             PetscCall(SNESSolve(snes, NULL, h));
             PetscCall(SNESGetIterationNumber(snes, &niter));
             PetscCall(PetscPrintf(PETSC_COMM_WORLD, "number of SNES iterations = %" PetscInt_FMT "\n\n", niter));
@@ -299,6 +301,8 @@
         }
     }
 
+    Info << "Solved microlayer model ..." << nl;
+    
     computeHeatFlux(&microlayerContext);
 
     // Write files
@@ -327,6 +331,22 @@
         fileName qml_file = writeDir / "qml.csv";
 
         PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, qml_file.c_str(), &petscviewer));
+        PetscCall(VecView(microlayerContext.q, petscviewer));
+        PetscCall(PetscViewerDestroy(&petscviewer));
+
+        fileName xml_binary = writeDir / "xml.dat";
+
+        PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, xml_binary.c_str(), FILE_MODE_WRITE, &petscviewer));
+        PetscCall(VecView(microlayerContext.x, petscviewer));
+        PetscCall(PetscViewerDestroy(&petscviewer));
+
+        fileName hml_binary = writeDir / "hml.dat";
+        PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, hml_binary.c_str(), FILE_MODE_WRITE, &petscviewer));
+        PetscCall(VecView(microlayerContext.h, petscviewer));
+        PetscCall(PetscViewerDestroy(&petscviewer));
+
+        fileName qml_binary = writeDir / "qml.dat";
+        PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, qml_binary.c_str(), FILE_MODE_WRITE, &petscviewer));
         PetscCall(VecView(microlayerContext.q, petscviewer));
         PetscCall(PetscViewerDestroy(&petscviewer));
     }
