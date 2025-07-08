@@ -373,6 +373,8 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_);
 
 PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_);
 
+PetscErrorCode boundThickness(void *ctx_, PetscScalar lim_);
+
 PetscErrorCode computeHeatFlux(void *ctx_);
 
 PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_);

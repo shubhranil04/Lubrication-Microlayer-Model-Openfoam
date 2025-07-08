@@ -303,6 +303,8 @@
 
     Info << "Solved microlayer model ..." << nl;
 
+    boundThickness(&microlayerContext, 1e-10);
+
     computeHeatFlux(&microlayerContext);
 
     // Write files

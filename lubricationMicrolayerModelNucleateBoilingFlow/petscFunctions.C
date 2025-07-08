@@ -330,6 +330,36 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode boundThickness(void *ctx_, PetscScalar lim_)
+{
+    MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
+    // Fluid properties
+
+    // Current State
+    Vec h_ = ctx->h; // Current interface profile
+
+    // Get access to the array data
+    PetscScalar *hp;
+    PetscInt n;
+
+    PetscCall(VecGetSize(h_, &n));
+    PetscCall(VecGetArray(h_, &hp));
+
+    for (PetscInt i = 0; i < n; ++i)
+    {
+        if (hp[i] < lim_)
+        {
+            // If the microlayer thickness is below the limit, set it to the limit
+            PetscScalar newThickness = lim_;
+            hp[i] = newThickness;
+        }
+    }
+
+    VecRestoreArray(h_, &hp);
+
+    return PETSC_SUCCESS;
+}
+
 PetscErrorCode computeHeatFlux(void *ctx_)
 {
     MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
@@ -367,6 +397,8 @@ PetscErrorCode computeHeatFlux(void *ctx_)
 
     return PETSC_SUCCESS;
 }
+
+
 
 PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
 {
