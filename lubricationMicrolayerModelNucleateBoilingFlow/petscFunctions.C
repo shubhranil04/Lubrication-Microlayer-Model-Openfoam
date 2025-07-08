@@ -70,12 +70,23 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     {
         // fp[i] = hp[i] - hnp[i] + dt / (6 * mu * ds) * (hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * Ls) * (sigma * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) + rhol * g) - hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * Ls) * (sigma * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) + rhol * g)) - dt * Ucl * (hp[i + 1] - hp[i - 1]) / (2 * ds) + dt * (Tw - Tsat) / (rhol * hfg * (Ri + hp[i] / k)) - dt * sigma * Tsat / (pow(rhol * hfg, 2) * (Ri + hp[i] / k)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
 
-        fp[i] = hp[i] - hnp[i] +
-                dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1]) -
-                dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1]) +
-                dt * (Tw - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal)) 
-                - dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
+        // Central difference for first derivative
+        /*
+        fp[i] = hp[i] - hnp[i] 
+                + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1])
+                - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1])
+                + dt * (Tw - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal)) ;
+                //- dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
+        */
 
+        // Upwinded first derivative
+        fp[i] = hp[i] - hnp[i]
+                + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds))
+                - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds))
+                - dt * ucl * (hp[i + 1] - hp[i]) / ds
+                + dt * (Tw - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal)) ;
+                //- dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
+                
     }
 
     // Restore vectors
@@ -131,22 +142,46 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
         j[5] = i + 2;
         j[6] = i + 3;
 
+        // Central difference for first derivative
+
+        /*
         A[0] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
 
         A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
 
-        A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds)
-               -dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
+        A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds);
+               //-dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
 
-        A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Tw - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal
-               + dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) / kappal  * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
+        A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Tw - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal;
+               //+ dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) / kappal  * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
 
-        A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i +1] * (hp[i + 1] + 2 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / (2 * ds)
-               -dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
+        A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i +1] * (hp[i + 1] + 2 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / (2 * ds);
+               //-dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
 
         A[5] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
 
         A[6] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
+        */
+
+        // Upwinded first derivative
+
+        A[0] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
+
+        A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
+
+        A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls));
+               //-dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
+
+        A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Tw - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal + dt * ucl / ds;
+               //+ dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) / kappal  * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
+
+        A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i +1] * (hp[i + 1] + 2 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / ds;
+               //-dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
+
+        A[5] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
+
+        A[6] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
+
 
         PetscCall(MatSetValues(B, 1, &i, 7, j, A, INSERT_VALUES));
     }
