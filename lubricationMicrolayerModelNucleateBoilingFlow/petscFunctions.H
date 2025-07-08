@@ -81,6 +81,16 @@ struct MicrolayerContext
             n = Foam::max(int(l / dsReq) + 1, nMin);
             ds = l / (n - 1);
 
+            // Initialize PETSC vectors
+            VecCreateSeq(PETSC_COMM_SELF, n, &s);
+            VecCreateSeq(PETSC_COMM_SELF, n, &x);
+            VecCreateSeq(PETSC_COMM_SELF, n, &h);
+
+            PetscScalar *sp, *xp, *hp;
+            VecGetArray(s, &sp);
+            VecGetArray(x, &xp);
+            VecGetArray(h, &hp);
+
             if (initialMicrolayerThicknessModel == "landauLevichScriven" || initialMicrolayerThicknessModel == "landauLevich")
             {
                 // If initial microlayer thickness or bubble foot radius of curvature is not set, calculate them
@@ -134,6 +144,44 @@ struct MicrolayerContext
                 del0 = 1.34 * rc * Foam::pow(mul * Rbdot / sigma, 2.0 / 3.0);
 
                 std::cout << "Initial microlayer thickness = " << del0 * 1e6 << " micrometers" << std::endl;
+
+                // taninv
+
+                struct CoeffFunction
+                {
+                    Foam::scalar theta_, delta_, lml_;
+
+                    std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
+                    {
+                        Foam::scalar A = Foam::tan(theta_) / delta_;
+                        Foam::scalar u = Foam::atan(x * lml_);
+                        Foam::scalar du_dx = lml_ / (1 + Foam::pow(x * lml_, 2));
+
+                        Foam::scalar fx = A * u / x - 1;
+                        Foam::scalar dfx = A * (x * du_dx - u) / (x * x);
+                        return std::make_pair(fx, dfx);
+                    }
+                };
+
+                CoeffFunction f_{thetaApp, del0, l};
+
+                const Foam::scalar guess_ = 1e6;
+                const Foam::scalar min_ = 0;
+                const Foam::scalar max_ = 1e10;
+                const int digits_ = std::numeric_limits<Foam::scalar>::digits;
+
+                Foam::scalar b = boost::math::tools::newton_raphson_iterate(
+                    f_, guess_, min_, max_, digits_);
+
+                Foam::scalar a = Foam::tan(thetaApp) / b;
+
+                for (PetscInt i = 0; i < n; i++)
+                {
+                    sp[i] = i * ds;
+                    xp[i] = xCl + i * ds;
+
+                    hp[i] = a * Foam::atan(b * i * ds);
+                }
             }
 
             else if (initialMicrolayerThicknessModel == "linear")
@@ -147,6 +195,14 @@ struct MicrolayerContext
                 rc = 1e18;
 
                 curv = 0;
+
+                for (PetscInt i = 0; i < n; i++)
+                {
+                    sp[i] = i * ds;
+                    xp[i] = xCl + i * ds;
+
+                    hp[i] = cSlope * i * (xCl + i * ds); // Linear microlayer thickness
+                }
             }
 
             else if (initialMicrolayerThicknessModel == "powerLaw")
@@ -163,6 +219,14 @@ struct MicrolayerContext
                 rc = 1e18;
 
                 curv = 0;
+
+                for (PetscInt i = 0; i < n; i++)
+                {
+                    sp[i] = i * ds;
+                    xp[i] = xCl + i * ds;
+
+                    hp[i] = coeff * Foam::pow(xCl + i * ds, pow); // Power law microlayer thickness
+                }
             }
 
             else
@@ -173,16 +237,6 @@ struct MicrolayerContext
             }
 
             delM = del0; // 0.3 * rc; // 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
-
-            // Initialize PETSC vectors
-            VecCreateSeq(PETSC_COMM_SELF, n, &s);
-            VecCreateSeq(PETSC_COMM_SELF, n, &x);
-            VecCreateSeq(PETSC_COMM_SELF, n, &h);
-
-            PetscScalar *sp, *xp, *hp;
-            VecGetArray(s, &sp);
-            VecGetArray(x, &xp);
-            VecGetArray(h, &hp);
 
             // std::vector<double> xSp = {0, 0.1 * l, 0.2 * l, 0.22 * l, 0.3 * l, 0.4 * l, 0.5 * l, 0.6 * l, 0.7 * l, 0.8 * l, 1.001 * l};
             // std::vector<double> ySp = {0, 1.05 * del0, 0.52 * del0, 0.35 * del0, 0.45 * del0, 0.59 * del0, 0.73 * del0, 0.86 * del0, 0.95 * del0, 1.25 * del0, delM};
@@ -257,44 +311,6 @@ struct MicrolayerContext
             }
             */
 
-            // taninv
-
-            struct CoeffFunction
-            {
-                Foam::scalar theta_, delta_, lml_;
-
-                std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
-                {
-                    Foam::scalar A = Foam::tan(theta_) / delta_;
-                    Foam::scalar u = Foam::atan(x * lml_);
-                    Foam::scalar du_dx = lml_ / (1 + Foam::pow(x * lml_, 2));
-
-                    Foam::scalar fx = A * u / x - 1;
-                    Foam::scalar dfx = A * (x * du_dx - u) / (x * x);
-                    return std::make_pair(fx, dfx);
-                }
-            };
-
-            CoeffFunction f{thetaApp, del0, l};
-
-            const Foam::scalar guess = 1e6;
-            const Foam::scalar min = 0;
-            const Foam::scalar max = 1e10;
-            const int digits = std::numeric_limits<Foam::scalar>::digits;
-
-            Foam::scalar b = boost::math::tools::newton_raphson_iterate(
-                f, guess, min, max, digits);
-
-            Foam::scalar a = Foam::tan(thetaApp) / b;
-
-            for (PetscInt i = 0; i < n; i++)
-            {
-                sp[i] = i * ds;
-                xp[i] = xCl + i * ds;
-
-                hp[i] = a * Foam::atan(b * i * ds);
-            }
-
             VecRestoreArray(s, &sp);
             VecRestoreArray(x, &xp);
             VecRestoreArray(h, &hp);
@@ -318,7 +334,7 @@ struct MicrolayerContext
         else // For restart of simulation from a previous time step
         {
             if (l > 0)
-            {   
+            {
                 std::cout << "Reading microlayer information from previous time step ..." << std::endl;
 
                 Foam::fileName timeDir = runTime.timePath();
