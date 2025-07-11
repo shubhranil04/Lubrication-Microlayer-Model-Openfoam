@@ -393,12 +393,13 @@ PetscErrorCode computeHeatFlux(void *ctx_)
     Vec q_ = ctx->q; // Heat flux vector
 
     // Get access to the array data
-    const PetscScalar *hp;
+    const PetscScalar *hp, *Twp;
     PetscScalar *qp;
     PetscInt n;
 
     PetscCall(VecGetSize(h_, &n));
     PetscCall(VecGetArrayRead(h_, &hp));
+    PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
     PetscCall(VecGetArray(q_, &qp));
 
     for (PetscInt i = 0; i < n; ++i)
@@ -412,11 +413,12 @@ PetscErrorCode computeHeatFlux(void *ctx_)
 
         else
         {
-            qp[i] = (Tw - Tsat) / (Ri + hp[i] / kappal);
+            qp[i] = (Twp[i] - Tsat) / (Ri + hp[i] / kappal);
         }
     }
 
     VecRestoreArrayRead(h_, &hp);
+    VecRestoreArrayRead(ctx->Twall, &Twp);
     VecRestoreArray(q_, &qp);
 
     return PETSC_SUCCESS;
@@ -456,7 +458,7 @@ PetscErrorCode getWallTemperature(void *ctx_, const Foam::fvPatchScalarField &Tw
             Tw[i] = Twall[0];
             continue;
         }
-        
+
         for (PetscInt j = 0; j < nFaces - 1; ++j)
         {
             // Get the face center coordinates
