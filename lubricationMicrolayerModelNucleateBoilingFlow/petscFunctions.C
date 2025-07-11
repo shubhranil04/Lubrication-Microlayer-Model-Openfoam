@@ -7,6 +7,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     // Pointers to PETSc vectors
     const PetscScalar *hp, *hnp; // hp : pointer to next interface profile (variable of nonlinear eqns), hnp : pointer to current interface profile (stored in struct)
     PetscScalar *fp;             // ff : pointer to residual vector
+    const PetscScalar *Twp; // Twp : pointer to wall temperature vector
     PetscInt i, n;
     PetscCall(VecGetSize(h, &n));
 
@@ -37,6 +38,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     PetscFunctionBeginUser;
     PetscCall(VecGetArrayRead(h, &hp));
     PetscCall(VecGetArrayRead(hn, &hnp));
+    PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
     PetscCall(VecGetArray(f, &fp));
 
     // Compute function
@@ -68,11 +70,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     // Interior points
     for (i = 3; i < n - 3; i++)
     {
-        // fp[i] = hp[i] - hnp[i] + dt / (6 * mu * ds) * (hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * Ls) * (sigma * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) + rhol * g) - hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * Ls) * (sigma * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) + rhol * g)) - dt * Ucl * (hp[i + 1] - hp[i - 1]) / (2 * ds) + dt * (Tw - Tsat) / (rhol * hfg * (Ri + hp[i] / k)) - dt * sigma * Tsat / (pow(rhol * hfg, 2) * (Ri + hp[i] / k)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
-
         // Central difference for first derivative
-
-        //- dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
 
         if (hnp[i] <= 1e-10)
         {
@@ -81,7 +79,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
 
         else
         {
-            fp[i] = hp[i] - hnp[i] + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1]) - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1]) + dt * (Tw - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal));
+            fp[i] = hp[i] - hnp[i] + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1]) - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1]) + dt * (Twp[i] - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal));
         }
 
         // Upwinded first derivative
@@ -98,6 +96,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     // Restore vectors
     PetscCall(VecRestoreArrayRead(h, &hp));
     PetscCall(VecRestoreArrayRead(hn, &hnp));
+    PetscCall(VecRestoreArrayRead(ctx->Twall, &Twp));
     PetscCall(VecRestoreArray(f, &fp));
     PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -108,8 +107,8 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
 
     // Pointers to PETSc vectors
-    const PetscScalar *hp, *hnp; // hp : pointer to next interface profile (variable of nonlinear eqns)
-
+    const PetscScalar *hp, *hnp, *Twp; // hp : pointer to next interface profile (variable of nonlinear eqns)
+    
     PetscInt i, j[7], n; // i : Row Index, j : Column Index
     PetscCall(VecGetSize(h, &n));
     PetscScalar A[7]; // Jacobian entries
@@ -137,6 +136,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscFunctionBeginUser;
     PetscCall(VecGetArrayRead(h, &hp));
     PetscCall(VecGetArrayRead(ctx->h, &hnp));
+    PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
 
     // Interior Grid Points
     for (i = 3; i < n - 3; i++)
@@ -146,7 +146,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
         if (hnp[i] > 1e-10)
         {
-	    j[0] = i - 3;
+            j[0] = i - 3;
             j[1] = i - 2;
             j[2] = i - 1;
             j[3] = i;
@@ -159,13 +159,10 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
             A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
 
             A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds);
-            //-dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
 
-            A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Tw - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal;
-            //+ dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) / kappal  * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
+            A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Twp[i] - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal;
 
             A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i + 1] * (hp[i + 1] + 2 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / (2 * ds);
-            //-dt * sigma * Tsat / (PetscPowScalar(rhol * hfg, 2) * (Ri + hp[i] / kappal)) / (ds * ds);
 
             A[5] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
 
@@ -335,6 +332,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
     // Restore vectors
     PetscCall(VecRestoreArrayRead(h, &hp));
+    PetscCall(VecRestoreArrayRead(ctx->Twall, &Twp));
 
     // Assemble Matrix
     PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
@@ -405,7 +403,7 @@ PetscErrorCode computeHeatFlux(void *ctx_)
 
     for (PetscInt i = 0; i < n; ++i)
     {
-        
+
         if (hp[i] <= 1e-10)
         {
             // If the microlayer thickness is too small, set the heat flux to zero
@@ -420,6 +418,63 @@ PetscErrorCode computeHeatFlux(void *ctx_)
 
     VecRestoreArrayRead(h_, &hp);
     VecRestoreArray(q_, &qp);
+
+    return PETSC_SUCCESS;
+}
+
+PetscErrorCode getWallTemperature(void *ctx_, const Foam::fvPatchScalarField &Twall, const Foam::fvMesh &mesh)
+{
+    MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
+
+    const Foam::label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
+    const Foam::fvPatch &patch = mesh.boundary()[patchIndex];
+    Foam::label startFace = patch.start();
+    Foam::label nFaces = patch.size();
+
+    // Current State
+    Vec h_ = ctx->h; // Current interface profile
+    Vec x_ = ctx->x; // Current mesh coordinates
+
+    VecDuplicate(h_, &ctx->Twall);
+
+    Vec Twall_ = ctx->Twall; // Wall temperature vector
+
+    // Get access to the array data
+    PetscScalar *Tw;
+    const PetscScalar *xp;
+    PetscInt n;
+
+    PetscCall(VecGetSize(h_, &n));
+    PetscCall(VecGetArray(Twall_, &Tw));
+    PetscCall(VecGetArrayRead(x_, &xp));
+
+    for (PetscInt i = 0; i < n; ++i)
+    {   
+        // For microlayer coordinates less than the first face center, set the wall temperature to the first face center temperature
+        if (xp[i] < mesh.faceCentres()[startFace].x())
+        {
+            Tw[i] = Twall[0];
+            continue;
+        }
+        
+        for (PetscInt j = 0; j < nFaces - 1; ++j)
+        {
+            // Get the face center coordinates
+            PetscScalar xj = mesh.faceCentres()[startFace + j].x();
+            PetscScalar xjp1 = mesh.faceCentres()[startFace + j + 1].x();
+
+            if (xp[i] >= xj && xp[i] <= xjp1)
+            {
+                // If the microlayer mesh coordinate is between the two face centers, set the wall temperature using linear interpolation
+                PetscScalar alpha = (xp[i] - xj) / (xjp1 - xj);
+                Tw[i] = (1 - alpha) * Twall[j] + alpha * Twall[j + 1];
+                break;
+            }    
+        }
+    }
+
+    VecRestoreArray(Twall_, &Tw);
+    VecRestoreArrayRead(x_, &xp);
 
     return PETSC_SUCCESS;
 }

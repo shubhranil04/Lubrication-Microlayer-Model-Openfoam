@@ -15,10 +15,9 @@ struct MicrolayerContext
     PetscBool isMl; // Flag to indicate if microlayer is present
 
     PetscScalar r0, umax = 1e3; // Initial bubble radius, maximum bubble velocity
-    // contactline position, microlayer length, desired grid size, actual grid size time step
-    PetscScalar xCl, l, dsReq, ds, dt, dtMax;
-    PetscInt n, nMin; // number of grid points
-    Vec s, x, h, q;   // grid in contactline frame, grid in global frame, microlayer thickness, heat flux
+    PetscScalar xCl, l, dsReq, ds, dt = 0, dtMax; // contactline position, microlayer length, desired grid size, actual grid size, time step
+    PetscInt n, nMin; // number of grid points, minimum number of grid points
+    Vec s, x, h, q, Twall;   // grid in contactline frame, grid in global frame, microlayer thickness, heat flux, wall temperature
 
     PetscScalar ub = 0, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
 
@@ -62,16 +61,11 @@ struct MicrolayerContext
         dsReq = microlayerDict.lookupOrDefault<Foam::scalar>("desiredGridSize", 1e-6);
         nMin = microlayerDict.lookupOrDefault<Foam::label>("minimumGridPoints", 101); // Minimum number of grid points
 
-        dt = 0.0; // will be set during iteration
-        ub = 0.0; // will be set during iteration
-
         ucl = microlayerDict.get<Foam::scalar>("contactLineVelocity");
         thetaApp = microlayerDict.get<Foam::scalar>("thetaApp") * Foam::constant::mathematical::pi / 180.0; // Convert to radians
-        delm = 0;                                                                                           // microlayerDict.lookupOrDefault<Foam::scalar>("microregionHeight", 0);
+        delm = 0;                                                                                           
 
         const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
-
-        // umax = 10 * 2 * B * B * alphal / r0; // Maximum bubble velocity
 
         ub = 2 * B * B * alphal / r0 * Foam::sin(thetaApp); // Set bubble expansion velocity
 
@@ -222,16 +216,12 @@ struct MicrolayerContext
                 std::abort();
             }
 
-            delM = del0; // 0.3 * rc; // 10 * del0; // Foam::min(0.3 * rc, 20 * del0);
-
-            // std::vector<double> xSp = {0, 0.1 * l, 0.2 * l, 0.22 * l, 0.3 * l, 0.4 * l, 0.5 * l, 0.6 * l, 0.7 * l, 0.8 * l, 1.001 * l};
-            // std::vector<double> ySp = {0, 1.05 * del0, 0.52 * del0, 0.35 * del0, 0.45 * del0, 0.59 * del0, 0.73 * del0, 0.86 * del0, 0.95 * del0, 1.25 * del0, delM};
-            //  auto spline = boost::math::interpolators::makima<std::vector<double>>(std::move(xSp), std::move(ySp));
+            delM = del0; 
 
             // Based on dewetting cfd
             
             std::vector<double> xSp = {0, 0.1*l, 0.2*l, 0.3*l, 0.4*l, 0.5*l, 0.6*l, 0.7*l, 0.8*l, 0.9*l, 1*l, 1.1*l};
-            //std::vector<double> ySp = {0, 1.05*del0, 0.52*del0, 0.45*del0, 0.59*del0, 0.73*del0, 0.86*del0, 0.95*del0, 1.25*del0, 5.84*del0, 19.8*del0, 48.21*del0};
+ 
             std::vector<double> ySp = {0, 2*delM, 1.9*delM, 1.45*delM, 1.05*delM, 0.92*delM, 0.93*delM, 0.94*delM, 0.96*delM, 0.98*delM, delM, 1.02*delM};
 
             double x0Sp = 0.0;
@@ -247,7 +237,7 @@ struct MicrolayerContext
             {
                 sp[i] = i * ds;
                 xp[i] = xCl + i * ds;
-                hp[i] = spline(i * ds); // delM * i * ds / l; // Initial microlayer thickness (wedge shape)
+                hp[i] = spline(i * ds); 
             }
 
             VecRestoreArray(s, &sp);
@@ -313,6 +303,8 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_);
 PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_);
 
 PetscErrorCode boundThickness(void *ctx_, PetscScalar lim_);
+
+PetscErrorCode getWallTemperature(void *ctx_, const Foam::fvPatchScalarField& Twall, const Foam::fvMesh& mesh);
 
 PetscErrorCode computeHeatFlux(void *ctx_);
 

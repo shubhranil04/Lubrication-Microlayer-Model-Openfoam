@@ -81,7 +81,7 @@
     // smear microlayer mass source terms
     dimensionedScalar intPsi = fvc::domainIntegrate(spreadMicrolayerHeatSource) + dimensionedScalar("smallFix", spreadMicrolayerHeatSource.dimensions()*dimLength*dimLength*dimLength, SMALL);;
 
-    dimensionedScalar Ns ("Ns", dimless, 2.0);
+    dimensionedScalar Ns ("Ns", dimless, 1.0);
 
     Ns = intPsi0 / intPsi;
 

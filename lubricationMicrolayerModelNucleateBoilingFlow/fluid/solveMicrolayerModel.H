@@ -1,5 +1,12 @@
 
 {
+    // Get wall temperature from patch
+    // Get patch fields for interface normals and centers
+    const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
+    const fvPatch &patch = mesh.boundary()[patchIndex];
+
+    const fvPatchScalarField& Twall = T.boundaryField()[patchIndex];
+
     // Update microlayerContext
 
     Info << "Updating microlayer model parameters ..." << nl;
@@ -264,6 +271,9 @@
             PetscCall(VecDestroy(&sOld));
             PetscCall(VecDestroy(&hOld));
 
+            // Update wall temperature
+            getWallTemperature(&microlayerContext, Twall, mesh);
+
             // Initialize SNES
 
             SNES snes;
@@ -334,6 +344,12 @@
 
         PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, qml_file.c_str(), &petscviewer));
         PetscCall(VecView(microlayerContext.q, petscviewer));
+        PetscCall(PetscViewerDestroy(&petscviewer));
+
+        fileName Tw_file = writeDir / "Twml.csv";
+
+        PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, Tw_file.c_str(), &petscviewer));
+        PetscCall(VecView(microlayerContext.Twall, petscviewer));
         PetscCall(PetscViewerDestroy(&petscviewer));
 
         fileName xml_binary = writeDir / "xml.dat";
