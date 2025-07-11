@@ -1,3 +1,4 @@
+
 // Get boundary grid points
 
 {
@@ -35,9 +36,9 @@
     forAll(patch, faceI)
     {
         label meshFaceI = patch.start() + faceI;
-
+	
         // Face area magnitude
-        scalar faceAreaMag = mesh.magSf()[meshFaceI]; // or: mesh.Sf()[meshFaceI].mag()
+        scalar faceAreaMag = mag(mesh.Sf()[meshFaceI]); //mesh.magSf()[meshFaceI]; // or: mesh.Sf()[meshFaceI].mag()
 
         // Owner cell of the face
         label ownerCellI = mesh.faceOwner()[meshFaceI];
@@ -46,12 +47,16 @@
         scalar cellVolume = mesh.V()[ownerCellI];
 
         PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
-
+	
         sharpMicrolayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
-
+	
     }
 
     delete[] boundaryPoints;
+	
+    scalar maxHeatSource = gMin(sharpMicrolayerHeatSource.internalField());
+
+    Info << "Max Heat Source = " << maxHeatSource << nl;
 
     scalar spread_ = microlayerDict.lookupOrDefault<scalar>("spreadSolid", 3);
 
@@ -69,6 +74,19 @@
     );
 
     psiEqn.solve();
+	
+    // smear microlayer mass source terms
+    dimensionedScalar intPsi0 = fvc::domainIntegrate(sharpMicrolayerHeatSource);
 
+    // smear microlayer mass source terms
+    dimensionedScalar intPsi = fvc::domainIntegrate(spreadMicrolayerHeatSource) + dimensionedScalar("smallFix", spreadMicrolayerHeatSource.dimensions()*dimLength*dimLength*dimLength, SMALL);;
 
+    dimensionedScalar Ns ("Ns", dimless, 2.0);
+
+    Ns = intPsi0 / intPsi;
+
+    forAll(mesh.C(),celli)
+    {
+	spreadMicrolayerHeatSource[celli] = Ns.value() * spreadMicrolayerHeatSource[celli];
+    }
 }

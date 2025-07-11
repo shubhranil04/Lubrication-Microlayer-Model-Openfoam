@@ -108,7 +108,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     MicrolayerContext *ctx = (MicrolayerContext *)ctx_;
 
     // Pointers to PETSc vectors
-    const PetscScalar *hp; // hp : pointer to next interface profile (variable of nonlinear eqns)
+    const PetscScalar *hp, *hnp; // hp : pointer to next interface profile (variable of nonlinear eqns)
 
     PetscInt i, j[7], n; // i : Row Index, j : Column Index
     PetscCall(VecGetSize(h, &n));
@@ -136,22 +136,23 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
     PetscFunctionBeginUser;
     PetscCall(VecGetArrayRead(h, &hp));
+    PetscCall(VecGetArrayRead(ctx->h, &hnp));
 
     // Interior Grid Points
     for (i = 3; i < n - 3; i++)
     {
-        j[0] = i - 3;
-        j[1] = i - 2;
-        j[2] = i - 1;
-        j[3] = i;
-        j[4] = i + 1;
-        j[5] = i + 2;
-        j[6] = i + 3;
 
         // Central difference for first derivative
 
-        if (hp[i] > 1e-10)
+        if (hnp[i] > 1e-10)
         {
+	    j[0] = i - 3;
+            j[1] = i - 2;
+            j[2] = i - 1;
+            j[3] = i;
+            j[4] = i + 1;
+            j[5] = i + 2;
+            j[6] = i + 3;
 
             A[0] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
 
@@ -366,8 +367,7 @@ PetscErrorCode boundThickness(void *ctx_, PetscScalar lim_)
         if (hp[i] < lim_)
         {
             // If the microlayer thickness is below the limit, set it to the limit
-            PetscScalar newThickness = lim_;
-            hp[i] = newThickness;
+            hp[i] = 0;
         }
     }
 
@@ -485,6 +485,7 @@ PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
 
     PetscCall(VecRestoreArrayRead(q, &qp));
     PetscCall(VecRestoreArrayRead(x, &xp));
+
     return integral / denom; // Mean flux
 }
 // ************************************************************************* //
