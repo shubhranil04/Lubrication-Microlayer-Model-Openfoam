@@ -5,7 +5,7 @@
     const label patchIndex = mesh.boundaryMesh().findPatchID("fluid_to_solid");
     const fvPatch &patch = mesh.boundary()[patchIndex];
 
-    const fvPatchScalarField& Twall = T.boundaryField()[patchIndex];
+    const fvPatchScalarField& Twall = TL.boundaryField()[patchIndex];
 
     // Update microlayerContext
 
@@ -38,7 +38,7 @@
 
         microlayerContext.l += (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt;
 
-        if (microlayerContext.l < microlayerContext.dsReq)
+        if (microlayerContext.l < 10 * microlayerContext.dsReq)
         {
             microlayerContext.l = 0;
             microlayerContext.isMl = PETSC_FALSE;
@@ -168,7 +168,7 @@
 
             //Info << "Remeshing ..." << nl;
 
-            microlayerContext.n = max(int(microlayerContext.l / microlayerContext.dsReq) + 1, microlayerContext.nMin); // Have at least 11 nodes
+            microlayerContext.n = int(microlayerContext.l / microlayerContext.dsReq) + 1; // Have at least 11 nodes
 
             microlayerContext.ds = microlayerContext.l / (microlayerContext.n - 1);
 
@@ -292,7 +292,7 @@
 
             PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
             PetscCall(SNESSetFromOptions(snes));
-            PetscCall(SNESSetTolerances(snes, 1e-10, 1e-8, 1e-12, 100, 1000));
+            PetscCall(SNESSetTolerances(snes, 1e-8, 1e-6, 1e-10, 100, 1000));
             PetscCall(SNESGetTolerances(snes, &abstol, &rtol, &stol, &maxit, &maxf));
             PetscCall(SNESSetFunction(snes, r, FormFunction, &microlayerContext));
             PetscCall(SNESSetJacobian(snes, J, J, FormJacobian, &microlayerContext));
