@@ -11,7 +11,7 @@
 
     Info << "Updating microlayer model parameters ..." << nl;
 
-    if (mag(microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub)) < microlayerContext.umax)
+    if ((microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) < microlayerContext.umax) && (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) > 0))
     {
         microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub);
     }

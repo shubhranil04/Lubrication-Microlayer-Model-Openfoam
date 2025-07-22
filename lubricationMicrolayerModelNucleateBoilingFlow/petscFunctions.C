@@ -7,7 +7,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     // Pointers to PETSc vectors
     const PetscScalar *hp, *hnp; // hp : pointer to next interface profile (variable of nonlinear eqns), hnp : pointer to current interface profile (stored in struct)
     PetscScalar *fp;             // ff : pointer to residual vector
-    const PetscScalar *Twp; // Twp : pointer to wall temperature vector
+    const PetscScalar *Twp;      // Twp : pointer to wall temperature vector
     PetscInt i, n;
     PetscCall(VecGetSize(h, &n));
 
@@ -41,14 +41,19 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
     PetscCall(VecGetArray(f, &fp));
 
-    // Compute function
+    // Find the contact line position
+    PetscInt nCl = 0;
+
+    for (i = 2; i < n - 1; i++)
+    {
+        if ((hp[i] < 1e-10) && (hp[i + 1] > 1e-10))
+        {
+            nCl = i;
+            break;
+        }
+    }
 
     // Boundary conditions at Contact Line
-    /*
-    fp[0] = hp[0] - delm;                             // microlayer height = microregion height
-    fp[1] = hp[1] - hp[0] - ds * tan(theta);          // apparent contact angle condition
-    fp[2] = (-hp[0] + 3 * hp[1] - 3 * hp[2] + hp[3]); // dp/ds = 0 at contact line
-    */
 
     // Higher order boundary conditions at contact line
     fp[0] = hp[0] - delm;                                                    // microlayer height = microregion height
@@ -56,11 +61,6 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     fp[2] = -2.5 * hp[0] + 9 * hp[1] - 12 * hp[2] + 7 * hp[3] - 1.5 * hp[4]; // dp/ds = 0 at contact line
 
     // Boundary conditions at Bubble foot
-    /*
-    fp[n - 1] = hp[n - 1] - delM;                                         // microlayer height = matching thickness at end of microlayer
-    fp[n - 2] = (hp[n - 1] - 2 * hp[n - 2] + hp[n - 3]) - (ds * ds) * curv; // curvature condition at bubble foot
-    fp[n - 3] = (hp[n - 1] - 3 * hp[n - 2] + 3 * hp[n - 3] - hp[n - 4]);  // dp/ds = 0 at bubble foot
-    */
 
     // Higher order boundary conditions at bubble foot
     fp[n - 1] = hp[n - 1] - delM;                                                                   // microlayer height = matching thickness at end of microlayer
@@ -93,6 +93,10 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
         */
     }
 
+    fp[nCl] = hp[nCl] - delm;                                                                                // microlayer height = microregion height
+    fp[nCl + 1] = -1.5 * hp[nCl] + 2 * hp[nCl + 1] - 0.5 * hp[nCl + 2] - ds * tan(theta);                    // apparent contact angle condition
+    fp[nCl + 2] = -2.5 * hp[nCl] + 9 * hp[nCl + 1] - 12 * hp[nCl + 2] + 7 * hp[nCl + 3] - 1.5 * hp[nCl + 4]; // dp/ds = 0 at contact line
+
     // Restore vectors
     PetscCall(VecRestoreArrayRead(h, &hp));
     PetscCall(VecRestoreArrayRead(hn, &hnp));
@@ -108,7 +112,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
     // Pointers to PETSc vectors
     const PetscScalar *hp, *hnp, *Twp; // hp : pointer to next interface profile (variable of nonlinear eqns)
-    
+
     PetscInt i, j[7], n; // i : Row Index, j : Column Index
     PetscCall(VecGetSize(h, &n));
     PetscScalar A[7]; // Jacobian entries
@@ -137,6 +141,18 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscCall(VecGetArrayRead(h, &hp));
     PetscCall(VecGetArrayRead(ctx->h, &hnp));
     PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
+
+    // Find the contact line position
+    PetscInt nCl = 0;
+
+    for (i = 2; i < n - 1; i++)
+    {
+        if ((hp[i] < 1e-10) && (hp[i + 1] > 1e-10))
+        {
+            nCl = i;
+            break;
+        }
+    }
 
     // Interior Grid Points
     for (i = 3; i < n - 3; i++)
@@ -203,35 +219,6 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
     // Boundary Conditions at Contact Line
 
-    /*
-    i = 0;
-    A[0] = 1.0;
-
-    PetscCall(MatSetValues(B, 1, &i, 1, &i, A, INSERT_VALUES));
-
-    i = 1;
-    j[0] = 0;
-    j[1] = 1;
-
-    A[0] = -1.0;
-    A[1] = 1.0;
-
-    PetscCall(MatSetValues(B, 1, &i, 2, j, A, INSERT_VALUES));
-
-    i = 2;
-    j[0] = 0;
-    j[1] = 1;
-    j[2] = 2;
-    j[3] = 3;
-
-    A[0] = -1.0;
-    A[1] = 3.0;
-    A[2] = -3.0;
-    A[3] = 1.0;
-
-    PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
-    */
-
     // Higher order boundary conditions at contact line
     i = 0;
     A[0] = 1.0;
@@ -264,37 +251,40 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
     PetscCall(MatSetValues(B, 1, &i, 5, j, A, INSERT_VALUES));
 
-    // Boundary Conditions at Bubble Foot
-    /*
-    i = n - 1;
-    A[0] = 1.0;
+    // Boundary conditions at found contact line
+    if (nCl > 0)
+    {
+        i = nCl;
+        A[i] = 1.0;
 
-    PetscCall(MatSetValues(B, 1, &i, 1, &i, A, INSERT_VALUES));
+        PetscCall(MatSetValues(B, 1, &i, 1, &i, A, INSERT_VALUES));
 
-    i = n - 2;
-    j[0] = n - 3;
-    j[1] = n - 2;
-    j[2] = n - 1;
+        i = nCl + 1;
+        j[0] = nCl;
+        j[1] = nCl + 1;
+        j[2] = nCl + 2;
 
-    A[0] = 1.0;
-    A[1] = -2.0;
-    A[2] = 1.0;
+        A[0] = -3.0 / 2.0;
+        A[1] = 2.0;
+        A[2] = -1.0 / 2.0;
 
-    PetscCall(MatSetValues(B, 1, &i, 3, j, A, INSERT_VALUES));
+        PetscCall(MatSetValues(B, 1, &i, 3, j, A, INSERT_VALUES));
 
-    i = n - 3;
-    j[0] = n - 4;
-    j[1] = n - 3;
-    j[2] = n - 2;
-    j[3] = n - 1;
+        i = nCl + 2;
+        j[0] = nCl;
+        j[1] = nCl + 1;
+        j[2] = nCl + 2;
+        j[3] = nCl + 3;
+        j[4] = nCl + 4;
 
-    A[0] = -1.0;
-    A[1] = 3.0;
-    A[2] = -3.0;
-    A[3] = 1.0;
+        A[0] = -5.0 / 2.0;
+        A[1] = 9.0;
+        A[2] = -12.0;
+        A[3] = 7.0;
+        A[4] = -3.0 / 2.0;
 
-    PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
-    */
+        PetscCall(MatSetValues(B, 1, &i, 5, j, A, INSERT_VALUES));
+    }
 
     // Higher order boundary conditions at bubble foot
     i = n - 1;
@@ -451,7 +441,7 @@ PetscErrorCode getWallTemperature(void *ctx_, const Foam::fvPatchScalarField &Tw
     PetscCall(VecGetArrayRead(x_, &xp));
 
     for (PetscInt i = 0; i < n; ++i)
-    {   
+    {
         // For microlayer coordinates less than the first face center, set the wall temperature to the first face center temperature
         if (xp[i] < mesh.faceCentres()[startFace].x())
         {
@@ -471,7 +461,7 @@ PetscErrorCode getWallTemperature(void *ctx_, const Foam::fvPatchScalarField &Tw
                 PetscScalar alpha = (xp[i] - xj) / (xjp1 - xj);
                 Tw[i] = (1 - alpha) * Twall[j] + alpha * Twall[j + 1];
                 break;
-            }    
+            }
         }
     }
 
