@@ -1,4 +1,4 @@
-
+if (microlayerContext.isMl)
 {
     // Get wall temperature from patch
     // Get patch fields for interface normals and centers
@@ -13,9 +13,22 @@
 
     if ((microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) < microlayerContext.umax) && (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) > 0))
     {
-        microlayerContext.ub = microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub);
+        scalar rel = 0.1;
+
+        microlayerContext.ub = (1-rel)*microlayerContext.ub + rel*microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub);	
     }
-    microlayerDict.set("bubbleExpansionVelocity", microlayerContext.ub);
+	
+    if (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionAcceleration", microlayerContext.ab) < 0)
+   {
+	scalar rel = 0.1;
+
+	microlayerContext.ab = (1-rel)*microlayerContext.ab + rel*microlayerDict.lookupOrDefault<scalar>("bubbleExpansionAcceleration", microlayerContext.ab);
+   }
+
+//    microlayerDict.set("bubbleExpansionVelocity", microlayerContext.ub);
+
+//    microlayerDict.set("bubbleExpansionAcceleration", microlayerContext.ab);
+
     // Divide foam time step into microlayer time step
 
     scalar dtFoam = runTime.deltaTValue();
@@ -42,6 +55,7 @@
         {
             microlayerContext.l = 0;
             microlayerContext.isMl = PETSC_FALSE;
+	    Info << "Microlayer depleted" << nl;
         }
 
         microlayerDict.set("contactLinePosition", microlayerContext.xCl);
@@ -74,7 +88,7 @@
 
                 microlayerContext.delM = microlayerContext.del0; // 10 * microlayerContext.del0;
             }
-
+	    
             else if (microlayerContext.initialMicrolayerThicknessModel == "landauLevichScriven")
             {
                 //Info << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution" << nl;
@@ -142,8 +156,6 @@
 
                 microlayerContext.del0 = coeff * Foam::pow(microlayerContext.xCl + microlayerContext.l, pow);
 
-                //Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
-
                 // Calculate meniscus curvature based on the initial microlayer thickness
 
                 if (microlayerContext.ub > 0)
@@ -155,12 +167,77 @@
                 microlayerContext.delM = microlayerContext.del0;
             }
 
-            else
+            //else
+            //{
+            //    FatalErrorInFunction
+            //        << "Unknown initialMicrolayerThicknessModel: " << microlayerContext.initialMicrolayerThicknessModel
+            //        << abort(FatalError);
+            //}
+		
+	    else if (microlayerContext.initialMicrolayerThicknessModel == "landauLevich")
             {
-                FatalErrorInFunction
-                    << "Unknown initialMicrolayerThicknessModel: " << microlayerContext.initialMicrolayerThicknessModel
-                    << abort(FatalError);
+
+                const scalar B = microlayerDict.get<scalar>("growthConstant");
+
+                scalar Rb = microlayerContext.xCl + microlayerContext.l;
+
+                scalar Rbdot = microlayerContext.ub;
+
+                const scalar Rbddot = microlayerContext.ab;
+
+                // Coefficients
+
+                const scalar a3 = microlayerContext.rhol / microlayerContext.sigma * (Foam::pow(Rbdot / Rb, 2.0) - Rbddot / (3 * Rb));
+
+                const scalar a2 = -microlayerContext.rhol * Rbddot / (2 * microlayerContext.sigma);
+
+                const scalar a1 = 1.0 / Rb;
+
+                const scalar a0 = -1;
+
+                struct CubicFunction
+                {
+                    Foam::scalar a, b, c, d;
+
+                    std::pair<Foam::scalar, Foam::scalar> operator()(Foam::scalar x) const
+                    {
+                        Foam::scalar fx = a * x * x * x + b * x * x + c * x + d;
+                        Foam::scalar dfx = 3 * a * x * x + 2 * b * x + c;
+                        return std::make_pair(fx, dfx);
+                    }
+                };
+
+                CubicFunction f{a3, a2, a1, a0};
+
+                const scalar guess = 10e-6;
+                const scalar min = -100.0;
+                const scalar max = 100.0;
+                const int digits = std::numeric_limits<Foam::scalar>::digits;
+
+                scalar root = boost::math::tools::newton_raphson_iterate(
+                    f, guess, min, max, digits);
+
+                const scalar xbar = root;
+
+		scalar curv = 3 * a3 * Foam::pow(xbar, 2) + 2 * a2 * xbar + a1;
+
+		scalar rc = 1.0 / curv;
+		
+		scalar del0 = 1.34 * rc * Foam::pow(microlayerContext.mul * Rbdot / microlayerContext.sigma, 2.0 / 3.0);		
+
+		microlayerDict.set("lldThickness", del0) ;
+                microlayerContext.curv = curv;
+
+                microlayerContext.rc = rc;
+		
+		scalar rel = 0.1;
+
+                microlayerContext.del0 = rel*del0 + (1-rel)*microlayerContext.del0;
+
+                microlayerContext.delM = microlayerContext.del0; 
+
             }
+
 
             microlayerDict.set("meniscusCurvature", microlayerContext.curv);
             microlayerDict.set("bubbleFootRadiusOfCurvature", microlayerContext.rc);
@@ -310,6 +387,8 @@
             PetscCall(SNESDestroy(&snes));
         }
     }
+
+    Info << "LLD thickness = " << microlayerContext.del0*1e6 << nl;
 
     Info << "Solved microlayer model ..." << nl;
 

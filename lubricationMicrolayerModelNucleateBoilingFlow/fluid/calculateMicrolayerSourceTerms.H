@@ -56,8 +56,10 @@
 
         PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
 
-        sharpMicrolayerMassSource[ownerCellI] = cellHeatFlux * faceAreaMag / cellVolume / microlayerContext.hfg;
-
+	if (alpha1[ownerCellI] < 1 - 1e-3)
+        {
+            sharpMicrolayerMassSource[ownerCellI] = cellHeatFlux * faceAreaMag / cellVolume / microlayerContext.hfg;
+        }
     }
 
     delete[] boundaryPoints;

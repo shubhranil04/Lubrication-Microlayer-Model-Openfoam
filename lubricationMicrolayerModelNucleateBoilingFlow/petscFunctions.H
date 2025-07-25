@@ -19,7 +19,7 @@ struct MicrolayerContext
     PetscInt n; // number of grid points
     Vec s, x, h, q, Twall;   // grid in contactline frame, grid in global frame, microlayer thickness, heat flux, wall temperature
 
-    PetscScalar ub = 0, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
+    PetscScalar ub = 0, ab = 0, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
 
     // Fluid properties
     PetscScalar rhol, mul, kappal, Tsat, sigma, hfg, Ri, ls, cpl, alphal; // density, viscosity, thermal conductivity, saturation temperature, surface tension, latent heat of vaporization, and interface thermal resistance
@@ -66,7 +66,9 @@ struct MicrolayerContext
 
         const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
 
-        ub = 2 * B * B * alphal / r0 * Foam::sin(thetaApp); // Set bubble expansion velocity
+        ub = 2 * B * B * alphal / r0; // Set bubble expansion velocity using Scriven solution
+
+	ab = - 4 * Foam::pow(B,4) * Foam::pow(alphal,2) / Foam::pow(r0,3); // Set bubble expansion acceleration using Scriven solution
 
         if (runTime.value() == 0)
         {
@@ -90,7 +92,7 @@ struct MicrolayerContext
 
                 std::cout << "Using Landau-Levich initial microlayer thickness model (Zhang et al. 2024) with Scriven solution for initial condition" << std::endl;
 
-                const Foam::scalar Rb = xCl + l;
+                const Foam::scalar Rb = r0;
 
                 const Foam::scalar Rbdot = 2 * B * B * alphal / Rb;
 

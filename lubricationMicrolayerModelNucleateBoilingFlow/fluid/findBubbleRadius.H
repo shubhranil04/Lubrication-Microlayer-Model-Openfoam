@@ -72,7 +72,17 @@
             if (hasContactLine)
             {
                 isCL = true;
-                bubbleRadius = pInterfaceCentres[faceI].x();
+                vector wallNormal = patch.nf().ref()[faceI];
+                wallNormal /= mag(wallNormal);
+
+                vector intNormal = cellInterfaceNormal / mag(cellInterfaceNormal);
+
+                scalar cosTheta = mag(wallNormal & intNormal);
+                const scalar theta = Foam::acos(cosTheta);
+		
+		Info << "Theta = " << theta*180/Foam::constant::mathematical::pi << endl;
+
+                bubbleRadius = pInterfaceCentres[faceI].x() - pInterfaceCentres[faceI].y() / Foam::tan(theta);
                 break;
             }
         }
@@ -85,8 +95,10 @@
 
             scalar bubbleExpansionVelocity = (bubbleRadius - bubbleRadius1) / (dt01 + 1e-20);
 
-            scalar bubbleExpansionAcceleration = 2 * bubbleRadius / ((dt01 + 1e-20) * (dt01 + dt12 + 1e-20)) 
-        - 2 * bubbleRadius1 / ((dt01 + 1e-20) * (dt12 + 1e-20)) + 2 * bubbleRadius2 / ((dt12 + 1e-20) * (dt01 + dt12 + 1e-20));
+        //    scalar bubbleExpansionAcceleration = 2 * bubbleRadius / ((dt01 + 1e-20) * (dt01 + dt12 + 1e-20)) 
+//        - 2 * bubbleRadius1 / ((dt01 + 1e-20) * (dt12 + 1e-20)) + 2 * bubbleRadius2 / ((dt12 + 1e-20) * (dt01 + dt12 + 1e-20));
+
+	    scalar bubbleExpansionAcceleration = (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) - bubbleExpansionVelocity)/(dt01 + 1e-20);
 
             Info << "" << nl << "Bubble radius = " << bubbleRadius << " m" << nl;
             Info << "Bubble foot expansion velocity = " << bubbleExpansionVelocity << " m/s" << nl;
