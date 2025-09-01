@@ -1,0 +1,119 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2106                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+application     lubricationMicrolayerModelNucleateBoilingFlow;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime; //writeNow; //endTime;
+
+endTime         0.04;
+
+deltaT          1e-9;
+
+writeControl    adjustable;
+
+writeInterval   1e-4;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  10;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   8;
+
+runTimeModifiable yes;
+
+maxCo           0.1;
+
+maxAlphaCo      0.1;
+
+maxCapillaryNum 1e8;
+
+// Maximum diffusion number
+maxDi           1000.0;
+
+maxDeltaT       1e-5;
+
+adjustTimeStep  yes;
+
+functions
+{
+Qdotsh
+{
+    // Mandatory entries (unmodifiable)
+    type            volFieldValue;
+    libs            (fieldFunctionObjects);
+
+    // Mandatory entries (runtime modifiable)
+    fields          ("massSource_");
+    operation       volIntegrate;
+    regionType	    all;
+    
+// Optional (inherited) entries
+    writeFields     false;
+    scalingFactor   1.0;
+    region 	    fluid;
+    writePrecision  8;
+    writeToFile     true;
+    useUserTime     true;
+    enabled         true;
+    log             true;
+    timeStart       0;
+    timeEnd         1000;
+    executeControl  timeStep;
+    executeInterval 1;
+    writeControl    timeStep;
+    writeInterval   1;
+}
+
+Qdotml
+{
+    // Mandatory entries (unmodifiable)
+    type            volFieldValue;
+    libs            (fieldFunctionObjects);
+
+    // Mandatory entries (runtime modifiable)
+    fields          ("sharpMicrolayerMassSource");
+    operation       volIntegrate;
+    regionType      all;
+    
+// Optional (inherited) entries
+    writeFields     false;
+    scalingFactor   1.0;
+    region          fluid;
+    writePrecision  8;
+    writeToFile     true;
+    useUserTime     true;
+    enabled         true;
+    log             true;
+    timeStart       0;
+    timeEnd         1000;
+    executeControl  timeStep;
+    executeInterval 1;
+    writeControl    timeStep;
+    writeInterval   1;
+}
+}
+
+
+// ************************************************************************* //
