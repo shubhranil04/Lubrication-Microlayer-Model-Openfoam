@@ -39,22 +39,31 @@
 	
         // Face area magnitude
         scalar faceAreaMag = mag(mesh.Sf()[meshFaceI]); //mesh.magSf()[meshFaceI]; // or: mesh.Sf()[meshFaceI].mag()
+	
+	scalar x1 = boundaryPoints[faceI];
+        scalar x2 = Foam::min(boundaryPoints[faceI + 1], microlayerContext.rbCalc);
 
+        // Calculate face area assuming wedge angle = 5 degrees 
+        scalar calcFaceArea = microlayerContext.wedgeAngle * Foam::constant::mathematical::pi/360*(x2*x2-x1*x1);
+
+        faceAreaMag = calcFaceArea;
         // Owner cell of the face
         label ownerCellI = mesh.faceOwner()[meshFaceI];
 
         // Volume of the owner cell
         scalar cellVolume = mesh.V()[ownerCellI];
 
-        PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
+        PetscScalar cellHeatFlux = computeMeanHeatFlux(x1, x2, &microlayerContext);
 	
-        sharpMicrolayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
-	
+	if (boundaryPoints[faceI] < microlayerContext.rbCalc)
+	{	
+        	sharpMicrolayerHeatSource[ownerCellI] = - cellHeatFlux * faceAreaMag / cellVolume ;
+	}
     }
 
     delete[] boundaryPoints;
 	
-    scalar maxHeatSource = gMin(sharpMicrolayerHeatSource.internalField());
+    scalar maxHeatSource = -gMin(sharpMicrolayerHeatSource.internalField());
 
     Info << "Max Heat Source = " << maxHeatSource << nl;
 

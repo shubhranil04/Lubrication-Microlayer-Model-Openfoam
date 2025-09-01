@@ -12,7 +12,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     PetscCall(VecGetSize(h, &n));
 
     // Fluid properties
-    PetscScalar sigma = ctx->dewettingFlag*ctx->sigma;   // Surface tension
+    PetscScalar sigma = ctx->sigma;   // Surface tension
     PetscScalar mul = ctx->mul;       // Viscosity
     PetscScalar rhol = ctx->rhol;     // Liquid density
     PetscScalar Ri = ctx->Ri;         // Interface Heat Transfer Resistance
@@ -29,7 +29,7 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     PetscScalar delM = ctx->delM;      // Matching thickness at end of microlayer
     PetscScalar rc = ctx->rc;          // Bubble foot radius of curvature
     PetscScalar ls = ctx->ls;          // Slip length
-    PetscScalar ucl = ctx->dewettingFlag*ctx->ucl;        // Contact line speed
+    PetscScalar ucl = ctx->ucl;        // Contact line speed
     PetscScalar theta = ctx->thetaApp; // Apparent contact angle
     PetscScalar curv = ctx->curv;      // Meniscus curvature
     // Current State
@@ -46,18 +46,11 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
     // Higher order boundary conditions at contact line
     fp[0] = hp[0] - delm;                                                    // microlayer height = microregion height
     fp[1] = -1.5 * hp[0] + 2 * hp[1] - 0.5 * hp[2] - ds * tan(theta);        // apparent contact angle condition
-    //fp[2] = -2.5 * hp[0] + 9 * hp[1] - 12 * hp[2] + 7 * hp[3] - 1.5 * hp[4]; // dp/ds = 0 at contact line
-    fp[2] = 2 * hp[0] - 5 * hp[1] + 4 * hp[2] - hp[3]; 	// zero curvature at contact line	
    
     // Boundary conditions at Bubble foot
 
-    // Higher order boundary conditions at bubble foot
-   // fp[n - 1] = hp[n - 1] - delM;                                                                   // microlayer height = matching thickness at end of microlayer
-   // fp[n - 2] = 2 * hp[n - 1] - 5 * hp[n - 2] + 4 * hp[n - 3] - hp[n - 4] - ds * ds * curv;         // curvature condition at bubble foot
-   // fp[n - 3] = 1.5 * hp[n - 1] - 2 * hp[n - 2] + 0.5 * hp[n - 3]; // zero slope at bubble foot	
-    
     // Interior points
-    for (i = 3; i < n - 3; i++)
+    for (i = 2; i < n - 2; i++)
     {
         // Central difference for first derivative
 
@@ -68,27 +61,21 @@ PetscErrorCode FormFunction(SNES snes, Vec h, Vec f, void *ctx_)
 
         else
         {
-            fp[i] = hp[i] - hnp[i] + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1]) - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1]) + dt * (Twp[i] - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal));
-	// - dt * sigma * Tsat / (std::pow(rhol * hfg, 2) * (Ri + hp[i] / kappal)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);;
+            fp[i] = hp[i] - hnp[i] + sigma*dt/(3*mul*ds*ds*ds*ds)*hp[i]*hp[i]*(hp[i]+3*ls)*(hp[i+2]-4*hp[i+1]+6*hp[i]-4*hp[i-1]+hp[i-2]) 
+		
+		+ sigma*dt/(4*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+2]-2*hp[i+1]+2*hp[i-1]-hp[i-2])*(hp[i+1]-hp[i-1])
+
+		-ucl*dt/(2*ds)*(hp[i+1]-hp[i-1]) + dt*(Twp[i]-Tsat)/(rhol*hfg*(Ri+hp[i]/kappal));
         }
     }
     
-    // Ghost nodes
-    PetscScalar hN = delM;
-    PetscScalar hNp1 = delM + ds * ds * curv;
-    
-
     // Boundary points
-    i = n - 3;
-    fp[i] =  hp[i] - hnp[i] + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hN - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1]) - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1]) + dt * (Twp[i] - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal));
-	// - dt * sigma * Tsat / (std::pow(rhol * hfg, 2) * (Ri + hp[i] / kappal)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
     
     i = n - 2;
-    fp[i] = hp[i] - hnp[i] + dt / (2 * ds) * (sigma / (3 * mul) * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls) * (hNp1 - 2 * hN + 2 * hp[i] - hp[i - 1]) / (2 * ds * ds * ds) - ucl * hp[i + 1]) - dt / (2 * ds) * (sigma / (3 * mul) * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) / (2 * ds * ds * ds) - ucl * hp[i - 1]) + dt * (Twp[i] - Tsat) / (rhol * hfg * (Ri + hp[i] / kappal));
-	// - dt * sigma * Tsat / (std::pow(rhol * hfg, 2) * (Ri + hp[i] / kappal)) * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds);
+    fp[i] = 3 * hp[n - 1] - 4 * hp[n - 2] + hp[n - 3];
 
     i = n - 1;
-    fp[i] = hp[i] - delM;
+    fp[i] = hp[n - 1] - delM;
 
     // Restore vectors
     PetscCall(VecRestoreArrayRead(h, &hp));
@@ -106,14 +93,14 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     // Pointers to PETSc vectors
     const PetscScalar *hp, *hnp, *Twp; // hp : pointer to next interface profile (variable of nonlinear eqns)
 
-    PetscInt i, j[7], n; // i : Row Index, j : Column Index
+    PetscInt i, j[5], n; // i : Row Index, j : Column Index
     PetscCall(VecGetSize(h, &n));
-    PetscScalar A[7]; // Jacobian entries
+    PetscScalar A[5]; // Jacobian entries
 
     PetscCall(VecGetSize(h, &n));
 
     // Fluid properties
-    PetscScalar sigma = ctx->dewettingFlag*ctx->sigma;   // Surface tension
+    PetscScalar sigma = ctx->sigma;   // Surface tension
     PetscScalar mul = ctx->mul;       // Viscosity
     PetscScalar rhol = ctx->rhol;     // Liquid density
     PetscScalar Ri = ctx->Ri;         // Interface Heat Transfer Resistance
@@ -130,7 +117,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscScalar dt = ctx->dt; // Time step
 
     PetscScalar ls = ctx->ls;   // Slip length
-    PetscScalar ucl = ctx->dewettingFlag*ctx->ucl; // Contact line speed
+    PetscScalar ucl = ctx->ucl; // Contact line speed
 
     PetscFunctionBeginUser;
     PetscCall(VecGetArrayRead(h, &hp));
@@ -138,38 +125,38 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
 
     // Interior Grid Points
-    for (i = 3; i < n - 3; i++)
+    for (i = 2; i < n - 2; i++)
     {
 
         // Central difference for first derivative
 
         if (hnp[i] > 1e-10)
         {
-            j[0] = i - 3;
-            j[1] = i - 2;
-            j[2] = i - 1;
-            j[3] = i;
-            j[4] = i + 1;
-            j[5] = i + 2;
-            j[6] = i + 3;
+            j[0] = i - 2;
+            j[1] = i - 1;
+            j[2] = i;
+            j[3] = i + 1;
+            j[4] = i + 2;
 
-            A[0] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
+            A[0] = dt*sigma/(3*mul*ds*ds*ds*ds)*hp[i]*hp[i]*(hp[i]+3*ls) - dt*sigma/(4*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+1]-hp[i-1]);
 
-            A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
+            A[1] = -4*dt*sigma/(3*mul*ds*ds*ds*ds)*hp[i]*hp[i]*(hp[i]+3*ls) + dt*sigma/(2*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+1]-hp[i-1])
 
-            A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds) - dt * Tsat * sigma / (rhol * hfg * rhol * hfg) * (1 / (Ri + hp[i] / kappal)) / (ds * ds);;
+		- dt*sigma/(4*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+2]-2*hp[i+1]+2*hp[i-1]-hp[i-2]) + ucl*dt/(2*ds);
 
-            A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Twp[i] - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal ;
-		//+ dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds)
-		//+ dt * Tsat *sigma/ (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * 2 / (ds * ds);
+            A[2] = 1 + sigma*dt/(mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+2]-4*hp[i+1]+6*hp[i]-4*hp[i-1]+hp[i-2]) 
+		
+	+ 2*sigma*dt/(mul*ds*ds*ds*ds)*hp[i]*hp[i]*(hp[i]+3*ls) + sigma*dt/(2*mul*ds*ds*ds*ds)*(hp[i]+ls)*(hp[i+2]-2*hp[i+2]+2*hp[i-1]-hp[i-2])*(hp[i+1]-hp[i-1])
 
-            A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i + 1] * (hp[i + 1] + 2 * ls) * (hp[i + 3] - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / (2 * ds) - dt * Tsat * sigma / (rhol * hfg * rhol * hfg) * (1 / (Ri + hp[i] / kappal)) / (ds * ds);;
+	- dt/(kappal*rhol*hfg)*(Twp[i]-Tsat)/(Ri+hp[i]/kappal)/(Ri+hp[i]/kappal);
 
-            A[5] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
-	    
-            A[6] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
+            A[3] = -4*dt*sigma/(3*mul*ds*ds*ds*ds)*hp[i]*hp[i]*(hp[i]+3*ls) - dt*sigma/(2*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+1]-hp[i-1])
 
-            PetscCall(MatSetValues(B, 1, &i, 7, j, A, INSERT_VALUES));
+	+ dt*sigma/(4*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+2]-2*hp[i+1]+2*hp[i-1]-hp[i-2]) - ucl*dt/(2*ds);
+
+            A[4] = dt*sigma/(3*mul*ds*ds*ds*ds)*hp[i]*hp[i]*(hp[i]+3*ls) + dt*sigma/(4*mul*ds*ds*ds*ds)*hp[i]*(hp[i]+2*ls)*(hp[i+1]-hp[i-1]);
+
+            PetscCall(MatSetValues(B, 1, &i, 5, j, A, INSERT_VALUES));
 
         }
 
@@ -202,41 +189,14 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
 
     PetscCall(MatSetValues(B, 1, &i, 3, j, A, INSERT_VALUES));
 
-    // Zero Curvature at contact line
-    i = 2;
-    j[0] = 0;
-    j[1] = 1;
-    j[2] = 2;
-    j[3] = 3;
-
-    A[0] = 2.0;
-    A[1] = -5.0;
-    A[2] = 4.0;
-    A[3] = -1.0;
-
-    PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
-
 
     // Higher order boundary conditions at bubble foot
     i = n - 1;
     A[0] = 1.0;
 
     PetscCall(MatSetValues(B, 1, &i, 1, &i, A, INSERT_VALUES));
-/*
+
     i = n - 2;
-    j[0] = n - 4;
-    j[1] = n - 3;
-    j[2] = n - 2;
-    j[3] = n - 1;
-
-    A[0] = -1.0;
-    A[1] = 4.0;
-    A[2] = -5.0;
-    A[3] = 2.0;
-
-    PetscCall(MatSetValues(B, 1, &i, 4, j, A, INSERT_VALUES));
-
-    i = n - 3;
     j[0] = n - 3;
     j[1] = n - 2;
     j[2] = n - 1;
@@ -246,48 +206,6 @@ PetscErrorCode FormJacobian(SNES snes, Vec h, Mat jac, Mat B, void *ctx_)
     A[2] = 1.5;
 
     PetscCall(MatSetValues(B, 1, &i, 3, j, A, INSERT_VALUES));
-*/ 
-
- // Ghost nodes
-    PetscScalar hN = delM;
-    PetscScalar hNp1 = delM + ds * ds * curv;
-    
-    i = n - 2;
-    j[0] = i - 3;
-    j[1] = i - 2;
-    j[2] = i - 1;
-    j[3] = i;
-    j[4] = i + 1;
-
-    A[0] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
-    A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
-    A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds) - dt * Tsat * sigma / (rhol * hfg * rhol * hfg) * (1 / (Ri + hp[i] / kappal)) / (ds * ds);;
-    A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Twp[i] - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal ;
-	//	+ dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds)
-	//	+ dt * Tsat *sigma/ (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * 2 / (ds * ds);
-    A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i + 1] * (hp[i + 1] + 2 * ls) * (hNp1 - 2 * hN + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / (2 * ds) - dt * Tsat * sigma / (rhol * hfg * rhol * hfg) * (1 / (Ri + hp[i] / kappal)) / (ds * ds);;
-
-    PetscCall(MatSetValues(B, 1, &i, 5, j, A, INSERT_VALUES));
-
-    i = n - 3;
-    j[0] = i - 3;
-    j[1] = i - 2;
-    j[2] = i - 1;
-    j[3] = i;
-    j[4] = i + 1;
-    j[5] = i + 2;
-
-    A[0] = dt / (12 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
-    A[1] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls);
-    A[2] = -dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * (hp[i - 1] + 2 * ls) * (hp[i + 1] - 2 * hp[i] + 2 * hp[i - 2] - hp[i - 3]) + hp[i + 1] * hp[i + 1] / 3 * (hp[i + 1] + 3 * ls)) + dt * ucl / (2 * ds) - dt * Tsat * sigma / (rhol * hfg * rhol * hfg) * (1 / (Ri + hp[i] / kappal)) / (ds * ds);;
-    A[3] = 1 + dt / (6 * ds * ds * ds * ds) * sigma / mul * (hp[i - 1] * hp[i - 1] * (hp[i - 1] + 3 * ls) + hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls)) - dt * (Twp[i] - Tsat) / (rhol * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal ;
-//	+ dt * Tsat * sigma / (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * (1 / (Ri + hp[i] / kappal)) * 1 / kappal * (hp[i + 1] - 2 * hp[i] + hp[i - 1]) / (ds * ds)
-//	+ dt * Tsat *sigma/ (rhol * rhol * hfg * hfg) * (1 / (Ri + hp[i] / kappal)) * 2 / (ds * ds);
-    A[4] = dt / (4 * ds * ds * ds * ds) * sigma / mul * (hp[i + 1] * (hp[i + 1] + 2 * ls) * (hN - 2 * hp[i + 2] + 2 * hp[i] - hp[i - 1]) - hp[i - 1] * hp[i - 1] / 3 * (hp[i - 1] + 3 * ls)) - dt * ucl / (2 * ds) - dt * Tsat * sigma / (rhol * hfg * rhol * hfg) * (1 / (Ri + hp[i] / kappal)) / (ds * ds);;
-    A[5] = -dt / (6 * ds * ds * ds * ds) * sigma / mul * hp[i + 1] * hp[i + 1] * (hp[i + 1] + 3 * ls);
-
-    PetscCall(MatSetValues(B, 1, &i, 6, j, A, INSERT_VALUES));
-
 
   // Restore vectors
     PetscCall(VecRestoreArrayRead(h, &hp));
@@ -311,17 +229,13 @@ PetscErrorCode boundThickness(void *ctx_, PetscScalar lim_)
 
     // Current State
     Vec h_ = ctx->h; // Current interface profile
-    Vec x_ = ctx->x;
 
     // Get access to the array data
-    PetscScalar *xp, *hp;
+    PetscScalar *hp;
     PetscInt n;
 
     PetscCall(VecGetSize(h_, &n));
     PetscCall(VecGetArray(h_, &hp));
-    PetscCall(VecGetArray(x_, &xp));
-
-    PetscBool ridgeDepleted_ = PETSC_FALSE;
 
     for (PetscInt i = 1; i < n; ++i)
     {
@@ -329,12 +243,8 @@ PetscErrorCode boundThickness(void *ctx_, PetscScalar lim_)
         {
             // If the microlayer thickness is below the limit, set it to the limit
             hp[i] = 0;
-//	    ctx->xCl = xp[i];
-	    ridgeDepleted_ = PETSC_TRUE;
         }
     }
-
-    ctx->ridgeDepleted = ridgeDepleted_;
 
     VecRestoreArray(h_, &hp);
 
@@ -349,9 +259,11 @@ PetscErrorCode computeHeatFlux(void *ctx_)
     PetscScalar kappal = ctx->kappal; // Thermal conductivity
     PetscScalar Tsat = ctx->Tsat;     // Saturation temperature
 
+    // For now, assume constant wall temperature
+    PetscScalar Tw = ctx->Tw; // Wall temperature
+
     // Current State
     Vec h_ = ctx->h; // Current interface profile
-    Vec Tw_ = ctx->Twall; // Current wall temperature profile
 
     VecDuplicate(h_, &ctx->q);
 
@@ -364,7 +276,7 @@ PetscErrorCode computeHeatFlux(void *ctx_)
 
     PetscCall(VecGetSize(h_, &n));
     PetscCall(VecGetArrayRead(h_, &hp));
-    PetscCall(VecGetArrayRead(Tw_, &Twp));
+    PetscCall(VecGetArrayRead(ctx->Twall, &Twp));
     PetscCall(VecGetArray(q_, &qp));
 
     for (PetscInt i = 0; i < n; ++i)
@@ -383,7 +295,7 @@ PetscErrorCode computeHeatFlux(void *ctx_)
     }
 
     VecRestoreArrayRead(h_, &hp);
-    VecRestoreArrayRead(Tw_, &Twp);
+    VecRestoreArrayRead(ctx->Twall, &Twp);
     VecRestoreArray(q_, &qp);
 
     return PETSC_SUCCESS;
@@ -439,10 +351,7 @@ PetscErrorCode getWallTemperature(void *ctx_, const Foam::fvPatchScalarField &Tw
             }
         }
     }
-
     ctx->TCl = Tw[0]; // Update contact line temperature
-	
-    if (ctx->TCl < ctx->Tsat){ctx->TCl = ctx->Tsat;}
 
     VecRestoreArray(Twall_, &Tw);
     VecRestoreArrayRead(x_, &xp);
@@ -488,17 +397,11 @@ PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
         {
             if (first)
             {
-                
-		if (i != 0) // Contact line 
-		{
-
-			PetscScalar dx = xp[i] - xMin;
-	                PetscScalar avgQ = qp[i];
-	                PetscScalar avgx = xp[i];
-        	        integral += avgQ * avgx * dx;
-                	length += dx;
-     		}
-
+                PetscScalar dx = xp[i] - xMin;
+                PetscScalar avgQ = qp[i];
+                PetscScalar avgx = xp[i];
+                integral += avgQ * avgx * dx;
+                length += dx;
                 first = PETSC_FALSE;
             }
 
@@ -518,7 +421,7 @@ PetscScalar computeMeanHeatFlux(PetscScalar xMin, PetscScalar xMax, void *ctx_)
     PetscCall(VecRestoreArrayRead(q, &qp));
     PetscCall(VecRestoreArrayRead(x, &xp));
 
-    return integral / (denom + 1e-20); // Mean flux
+    return integral / denom; // Mean flux
 }
 
 // ************************************************************************* //

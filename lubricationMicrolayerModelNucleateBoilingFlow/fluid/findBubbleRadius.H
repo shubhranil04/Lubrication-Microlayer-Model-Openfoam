@@ -111,7 +111,7 @@
 
             bubbleRadius2 = bubbleRadius1;
             bubbleRadius1 = bubbleRadius;
-
+	    microlayerContext.rbCalc = bubbleRadius; 
             dt12 = dt01;
         }
         else

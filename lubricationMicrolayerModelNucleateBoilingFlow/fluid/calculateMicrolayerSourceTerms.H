@@ -48,18 +48,35 @@
         // Face area magnitude
         scalar faceAreaMag = mesh.magSf()[meshFaceI]; // or: mesh.Sf()[meshFaceI].mag()
 
-        // Owner cell of the face
+	scalar x1 = boundaryPoints[faceI];
+	scalar x2 = Foam::min(boundaryPoints[faceI + 1], microlayerContext.rbCalc);
+
+	// Calculate face area assuming wedge angle = 5 degrees	
+	scalar calcFaceArea = microlayerContext.wedgeAngle * Foam::constant::mathematical::pi/360*(x2*x2-x1*x1);
+        
+	faceAreaMag = calcFaceArea;
+	//Info << "x = " << boundaryPoints[faceI]  << nl << " Face ratio = " << faceAreaMag/calcFaceArea << nl;
+	// Owner cell of the face
         label ownerCellI = mesh.faceOwner()[meshFaceI];
 
         // Volume of the owner cell
         scalar cellVolume = mesh.V()[ownerCellI];
+	
+	//scalar calcCellVol = calcFaceArea * 25e-6;
 
-        PetscScalar cellHeatFlux = computeMeanHeatFlux(boundaryPoints[faceI], boundaryPoints[faceI + 1], &microlayerContext);
+	//Info << " Volume ratio = " << cellVolume / calcCellVol << nl << "" << nl;
 
-	if (alpha1[ownerCellI] < 1 - 1e-3)
+        PetscScalar cellHeatFlux = computeMeanHeatFlux(x1, x2, &microlayerContext);
+	
+	// Calculate mass source only in vapor cells and cells containing interface
+	if (alpha1[ownerCellI] < 1-1e-3)
         {
             sharpMicrolayerMassSource[ownerCellI] = cellHeatFlux * faceAreaMag / cellVolume / microlayerContext.hfg;
         }
+	else 
+	{
+	    sharpMicrolayerMassSource[ownerCellI] = 0;
+	}
     }
 
     delete[] boundaryPoints;
@@ -94,8 +111,7 @@
     {
         if (alpha1[celli] < 1e-3)
         {
-            intPsiVapor.value() +=
-                (1.0-alpha1[celli])*spreadMicrolayerMassSource[celli]*mesh.V()[celli];
+            intPsiVapor.value() += (1.0-alpha1[celli])*spreadMicrolayerMassSource[celli]*mesh.V()[celli];
         }
         else if (alpha1[celli] > 1.0-1e-3)
         {
@@ -124,7 +140,7 @@
     {
         if (alpha1[celli] < 1e-3)
         {
-            spreadMicrolayerMassSource[celli] = Nv.value()*(1.0-alpha1[celli])*spreadMicrolayerMassSource[celli];
+            spreadMicrolayerMassSource[celli] = Nv.value()*(1-alpha1[celli])*spreadMicrolayerMassSource[celli];
         }
         else if (alpha1[celli] > 1.0-1e-3)
         {
@@ -135,4 +151,5 @@
             spreadMicrolayerMassSource[celli] = 0.0;
         }
     }
+	
 }

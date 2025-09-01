@@ -13,17 +13,73 @@ if (microlayerContext.isMl)
 
     if ((microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) < microlayerContext.umax) && (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) > 0))
     {
-        scalar rel = 0.1;
+        scalar rel = 0.9;
 
         microlayerContext.ub = (1-rel)*microlayerContext.ub + rel*microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub);	
     }
 	
+    if (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionVelocity", microlayerContext.ub) < 0)
+    {
+	
+	scalar rel = 0.1;
+
+	microlayerContext.ub = 0; //(1-rel)*microlayerContext.ub;
+
+    }
     if (microlayerDict.lookupOrDefault<scalar>("bubbleExpansionAcceleration", microlayerContext.ab) < 0)
    {
-	scalar rel = 0.1;
+	scalar rel = 0.9;
 
 	microlayerContext.ab = (1-rel)*microlayerContext.ab + rel*microlayerDict.lookupOrDefault<scalar>("bubbleExpansionAcceleration", microlayerContext.ab);
    }
+	
+	Info << "Tcl = " << microlayerContext.TCl << " K" <<  nl;
+        // Update apparent contact angle
+        microlayerContext.thetaApp = microlayerContext.theta0 + microlayerContext.A_theta * Foam::pow(microlayerContext.TCl - microlayerContext.Tsat, microlayerContext.b_theta);
+
+	Info << "Apparent Contact Angle = " << microlayerContext.thetaApp * 180 / Foam::constant::mathematical::pi << nl;
+
+	Info << "Ub = " << microlayerContext.ub << " m/s" << nl;
+
+        Info << "VarCa flag : " << microlayerContext.varCa << nl;
+        // Update contact line velocity
+        if (microlayerContext.varCa == 1)
+        {
+                scalar a = 1.094;
+                scalar e = std::exp(1);
+                scalar lv = 3*microlayerContext.ls/(e*microlayerContext.thetaApp);
+                scalar w = 0.1 * max(microlayerContext.xCl, microlayerContext.l);
+                scalar hinf = 0.1 * microlayerContext.del0;
+                scalar wsqbyhinf = w*w/hinf;
+
+                // Define the residual function as a lambda
+                auto residual = [&](double Ca) -> double {
+                        double thetaV3 = std::pow(microlayerContext.thetaApp, 3);
+                        double denom = 9.0 * std::log(4 * a / (e * e) * std::pow(Ca, 1.0 / 3.0) * wsqbyhinf / lv);
+                        double f = Ca - thetaV3 / denom;
+                        //return std::make_pair(f, 0.0);  // Derivative not needed for bisection
+                        return f;
+                };
+
+                double lower = 1e-6;
+                double upper = 1e-1;
+                int digits = std::numeric_limits<double>::digits;
+
+                try {
+                        auto result = boost::math::tools::bisect(residual, lower, upper, [](double l, double r) {
+                        return std::abs(r - l) < 1e-12;  // Termination condition
+                        });
+
+                        double root = 0.5 * (result.first + result.second);
+                        microlayerContext.ucl = microlayerContext.sigma * root / microlayerContext.mul;
+                } catch (const std::exception& ex) {
+                std::cerr << "Root-finding failed: " << ex.what() << std::endl;
+                }
+        }
+	
+        Info << "Ca = " << microlayerContext.ucl * microlayerContext.mul /(microlayerContext.sigma + SMALL) << nl;
+
+	Info << "Ucl = " << microlayerContext.ucl << " m/s" << nl;
 
 //    microlayerDict.set("bubbleExpansionVelocity", microlayerContext.ub);
 
@@ -33,6 +89,8 @@ if (microlayerContext.isMl)
 
     scalar dtFoam = runTime.deltaTValue();
     scalar dtReq = min(microlayerContext.dtMax, 0.5 * microlayerContext.ds / (mag(microlayerContext.ub) + 1e-10));
+    dtReq = min(dtReq, 0.5 * microlayerContext.ds / (mag(microlayerContext.ucl) + 1e-10));
+
     label n_time_steps = int(dtFoam / dtReq);
 
     if (n_time_steps < 1)
@@ -45,11 +103,22 @@ if (microlayerContext.isMl)
     Info << "Divided foam time step into " << n_time_steps << " microlayer time steps." << nl;
 
     for (label nt = 0; nt < n_time_steps; ++nt)
-    {
+    {	
 
-        microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
+	if (microlayerContext.ridgeDepleted)
+	{
+		microlayerContext.xCl += 2 * microlayerContext.ucl * microlayerContext.dt;
+	}
+	else
+	{
+		microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
+	}
 
-        microlayerContext.l += (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt;
+//        microlayerContext.xCl += microlayerContext.ucl * microlayerContext.dt;
+	
+	microlayerContext.xB += microlayerContext.ub * microlayerContext.dt;
+
+        microlayerContext.l = microlayerContext.xB - microlayerContext.xCl; //+= (microlayerContext.ub - microlayerContext.ucl) * microlayerContext.dt;
 
         if (microlayerContext.l < 10 * microlayerContext.dsReq)
         {
@@ -57,6 +126,12 @@ if (microlayerContext.isMl)
             microlayerContext.isMl = PETSC_FALSE;
 	    Info << "Microlayer depleted" << nl;
         }
+	
+	if (microlayerContext.xCl > microlayerContext.rbCalc)
+	{
+            microlayerContext.isMl = PETSC_FALSE;
+            Info << "Microlayer depleted" << nl;
+	}
 
         microlayerDict.set("contactLinePosition", microlayerContext.xCl);
         microlayerDict.set("microlayerLength", microlayerContext.l);
@@ -125,7 +200,7 @@ if (microlayerContext.isMl)
 
                 CubicFunction f{a3, a2, a1, a0};
 
-                const scalar guess = 10e-6;
+                const scalar guess = 1e-6;
                 const scalar min = -100.0;
                 const scalar max = 100.0;
                 const int digits = std::numeric_limits<Foam::scalar>::digits;
@@ -141,7 +216,7 @@ if (microlayerContext.isMl)
 
                 microlayerContext.del0 = 1.34 * microlayerContext.rc * Foam::pow(microlayerContext.mul * Rbdot / microlayerContext.sigma, 2.0 / 3.0);
 
-                microlayerContext.delM = microlayerContext.del0; // 0.3*microlayerContext.rc; //10 * microlayerContext.del0;
+                microlayerContext.delM = microlayerContext.del0; 
 
                 //Info << "Initial microlayer thickness = " << microlayerContext.del0 * 1e6 << " micrometers" << nl;
             }
@@ -245,21 +320,22 @@ if (microlayerContext.isMl)
 
             //Info << "Remeshing ..." << nl;
 
-            microlayerContext.n = int(microlayerContext.l / microlayerContext.dsReq) + 1; // Have at least 11 nodes
+            microlayerContext.n = int(microlayerContext.l / microlayerContext.dsReq) + 1; 
 
             microlayerContext.ds = microlayerContext.l / (microlayerContext.n - 1);
 
-            // Declare vectors to store old grid data and new grid data
 
             // Declare vectors to store old grid data and new grid data
             Vec sOld;
             Vec sNew;
+            Vec xOld;
             Vec xNew;
             Vec hOld;
             Vec hNew;
 
             // Create vectors
             PetscCall(VecDuplicate(microlayerContext.s, &sOld));
+            PetscCall(VecDuplicate(microlayerContext.x, &xOld));
             PetscCall(VecDuplicate(microlayerContext.h, &hOld));
 
             PetscCall(VecCreate(PETSC_COMM_WORLD, &sNew));
@@ -271,15 +347,18 @@ if (microlayerContext.isMl)
 
             // Copy data into vectors
             PetscCall(VecCopy(microlayerContext.s, sOld));
+            PetscCall(VecCopy(microlayerContext.x, xOld));
             PetscCall(VecCopy(microlayerContext.h, hOld));
 
             // Get pointers to PETSc vectors
-            const PetscScalar *hOldp, *sOldp;
+            const PetscScalar *hOldp, *sOldp, *xOldp;
             PetscInt nOld;
             PetscScalar *hNewp, *sNewp, *xNewp;
 
             PetscCall(VecGetArrayRead(sOld, &sOldp));
             PetscCall(VecGetArrayRead(hOld, &hOldp));
+            PetscCall(VecGetArrayRead(xOld, &xOldp));
+
             PetscCall(VecGetSize(sOld, &nOld));
             PetscCall(VecGetArray(sNew, &sNewp));
             PetscCall(VecGetArray(hNew, &hNewp));
@@ -299,17 +378,17 @@ if (microlayerContext.isMl)
             for (PetscInt j = 0; j < microlayerContext.n; j++)
             {
                 // for new nodes in between old grid end points
-                if ((sNewp[j] > sOldp[0]) && (sNewp[j] < sOldp[nOld - 1]))
+                if ((xNewp[j] > xOldp[0]) && (xNewp[j] < xOldp[nOld - 1]))
                 {
                     // Find k such that sOldp[k] <= s < sOldp[k+1]
                     PetscInt k = 0;
-                    while ((k < nOld - 2) && (sOldp[k + 1] < sNewp[j]))
+                    while ((k < nOld - 1) && (xOldp[k + 1] < xNewp[j]))
                     {
                         ++k;
                     }
 
                     // Linear interpolation
-                    hNewp[j] = ((sOldp[k + 1] - sNewp[j]) * hOldp[k] + (sNewp[j] - sOldp[k]) * hOldp[k + 1]) / (sOldp[k + 1] - sOldp[k]);
+                    hNewp[j] = ((xOldp[k + 1] - xNewp[j]) * hOldp[k] + (xNewp[j] - xOldp[k]) * hOldp[k + 1]) / (xOldp[k + 1] - xOldp[k]);
                 }
 
                 // Boundary conditions
@@ -327,6 +406,8 @@ if (microlayerContext.isMl)
             // Restore vectors
             PetscCall(VecRestoreArrayRead(hOld, &hOldp));
             PetscCall(VecRestoreArrayRead(sOld, &sOldp));
+            PetscCall(VecRestoreArrayRead(xOld, &xOldp));
+
             PetscCall(VecRestoreArray(sNew, &sNewp));
             PetscCall(VecRestoreArray(xNew, &xNewp));
             PetscCall(VecRestoreArray(hNew, &hNewp));
@@ -347,6 +428,7 @@ if (microlayerContext.isMl)
             PetscCall(VecDestroy(&hNew));
             PetscCall(VecDestroy(&sOld));
             PetscCall(VecDestroy(&hOld));
+	    PetscCall(VecDestroy(&xOld));
 
             // Update wall temperature
             getWallTemperature(&microlayerContext, Twall, mesh);
@@ -385,13 +467,14 @@ if (microlayerContext.isMl)
             PetscCall(VecDestroy(&r));
             PetscCall(MatDestroy(&J));
             PetscCall(SNESDestroy(&snes));
+
         }
     }
 
     Info << "LLD thickness = " << microlayerContext.del0*1e6 << nl;
 
     Info << "Solved microlayer model ..." << nl;
-
+    
     boundThickness(&microlayerContext, 1e-10);
 
     computeHeatFlux(&microlayerContext);

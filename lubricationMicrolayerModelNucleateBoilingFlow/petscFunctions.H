@@ -14,13 +14,18 @@ struct MicrolayerContext
 {
     PetscBool isMl; // Flag to indicate if microlayer is present
 
+    PetscBool ridgeDepleted = PETSC_FALSE;
+    PetscScalar dewettingFlag = 1;
+    PetscScalar wedgeAngle; // Wedge angle of mesh (in degrees)
     PetscScalar r0, umax = 1e3; // Initial bubble radius, maximum bubble velocity
-    PetscScalar xCl, l, dsReq, ds, dt = 0, dtMax; // contactline position, microlayer length, desired grid size, actual grid size, time step
+    PetscScalar xCl, xB, l, dsReq, ds, dt = 0, dtMax; // contactline position, microlayer end position, microlayer length, desired grid size, actual grid size, time step
     PetscInt n; // number of grid points
     Vec s, x, h, q, Twall;   // grid in contactline frame, grid in global frame, microlayer thickness, heat flux, wall temperature
 
-    PetscScalar ub = 0, ab = 0, ucl, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
-
+    PetscInt varCa; // if true, calculate contact line velocity during runtime
+    PetscScalar A_theta, b_theta; // powerlaw coeffs for evaporative contact angle $ \theta_{ev} = \theta_0 + A \Delta T ^ b $ (in radians)
+    PetscScalar ub = 0, ab = 0, ucl, TCl, theta0, thetaApp, delm, del0, rc, curv, delM; // bubble expansion velocity, contactline speed, apparent contact angle, microregion height, initial microlayer thickness, bubble foot radius of curvature, matching thickness at end of microlayer
+    PetscScalar rbCalc;
     // Fluid properties
     PetscScalar rhol, mul, kappal, Tsat, sigma, hfg, Ri, ls, cpl, alphal; // density, viscosity, thermal conductivity, saturation temperature, surface tension, latent heat of vaporization, and interface thermal resistance
     // Constructor
@@ -43,27 +48,38 @@ struct MicrolayerContext
         ls = microlayerDict.get<Foam::scalar>("ls");
         cpl = microlayerDict.get<Foam::scalar>("cpl");
         Tw = microlayerDict.get<Foam::scalar>("Tw");
+	TCl = Tw;
         alphal = kappal / (rhol * cpl); // Thermal diffusivity of liquid
-
+	dewettingFlag = microlayerDict.lookupOrDefault<Foam::scalar>("dewettingFlag", 1);
+	wedgeAngle = microlayerDict.get<Foam::scalar>("wedgeAngle");
         // Read initial microlayer thickness model
         initialMicrolayerThicknessModel = microlayerDict.lookupOrDefault<Foam::word>("initialMicrolayerThicknessModel", "linear");
+	
+	// Read flag for variable contact line Ca
+	varCa = microlayerDict.lookupOrDefault<Foam::label>("variableCapillaryNum",0);
 
         // Initialize PETSC context with microlayer properties
         r0 = microlayerDict.lookupOrDefault<Foam::scalar>("bubbleRadius", 10e-6); // Initial bubble radius
-        xCl = microlayerDict.get<Foam::scalar>("contactLinePosition");
+        rbCalc = r0;
+		
+	xCl = microlayerDict.get<Foam::scalar>("contactLinePosition");
         dtMax = microlayerDict.lookupOrDefault<Foam::scalar>("maximumTimeStep", 1e-8); // Maximum time step
         l = microlayerDict.get<Foam::scalar>("microlayerLength");
         if (l > 0)
         {
             isMl = PETSC_TRUE; // Microlayer is present
         }
+	xB = xCl + l;
 
         dsReq = microlayerDict.lookupOrDefault<Foam::scalar>("desiredGridSize", 1e-6);
 
         ucl = microlayerDict.get<Foam::scalar>("contactLineVelocity");
-        thetaApp = microlayerDict.get<Foam::scalar>("thetaApp") * Foam::constant::mathematical::pi / 180.0; // Convert to radians
-        delm = 0;                                                                                           
-
+        theta0 = microlayerDict.get<Foam::scalar>("theta0") * Foam::constant::mathematical::pi / 180.0; // Convert to radians
+        delm = microlayerDict.get<Foam::scalar>("microregionHeight");                                                                                           
+	A_theta = microlayerDict.get<Foam::scalar>("A_theta");
+	b_theta = microlayerDict.get<Foam::scalar>("b_theta");
+	
+	thetaApp = theta0 + A_theta * Foam::pow(TCl-Tsat, b_theta);
         const Foam::scalar B = microlayerDict.get<Foam::scalar>("growthConstant");
 
         ub = 2 * B * B * alphal / r0; // Set bubble expansion velocity using Scriven solution
@@ -180,29 +196,6 @@ struct MicrolayerContext
 
             delM = del0; 
 
-            // Based on dewetting cfd
-/*            
-            std::vector<double> xSp = {0, 0.1*l, 0.2*l, 0.3*l, 0.4*l, 0.5*l, 0.6*l, 0.7*l, 0.8*l, 0.9*l, 1*l, 1.1*l};
- 
-            std::vector<double> ySp = {0, 2*delM, 1.9*delM, 1.45*delM, 1.05*delM, 0.92*delM, 0.93*delM, 0.94*delM, 0.96*delM, 0.98*delM, delM, 1.02*delM};
-
-            double x0Sp = 0.0;
-            double dxSp = 0.1 * l; // Uniform spacing
-
-            // Construct the spline
-            auto spline = boost::math::interpolators::cardinal_cubic_b_spline<double>(
-                ySp.begin(), ySp.end(), x0Sp, dxSp
-            );
-
-
-            for (PetscInt i = 0; i < n; i++)
-            {
-                sp[i] = i * ds;
-                xp[i] = xCl + i * ds;
-                hp[i] = spline(i * ds); 
-            }
-*/
-
                 // taninv
                 
                 struct CoeffFunction
@@ -221,7 +214,7 @@ struct MicrolayerContext
                     }
                 };
 
-                CoeffFunction f_{thetaApp, del0, l};
+                CoeffFunction f_{thetaApp, del0 - delm, l};
 
                 const Foam::scalar guess_ = 1e6;
                 const Foam::scalar min_ = 0;
@@ -238,7 +231,7 @@ struct MicrolayerContext
                     sp[i] = i * ds;
                     xp[i] = xCl + i * ds;
 
-                    hp[i] = a * Foam::atan(b * i * ds);
+                    hp[i] = delm + a * Foam::atan(b * i * ds);
                 }
 
                 
@@ -247,7 +240,7 @@ struct MicrolayerContext
             VecRestoreArray(s, &sp);
             VecRestoreArray(x, &xp);
             VecRestoreArray(h, &hp);
-
+	    
             // Write initial conditions
             PetscViewer viewer;
 
